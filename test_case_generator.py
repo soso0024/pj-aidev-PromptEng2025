@@ -18,10 +18,11 @@ from dotenv import load_dotenv
 
 
 class TestCaseGenerator:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, include_docstring: bool = False):
         """Initialize the test case generator with Claude API client."""
         self.client = anthropic.Anthropic(api_key=api_key)
         self.problems = []
+        self.include_docstring = include_docstring
         self.total_input_tokens = 0
         self.total_output_tokens = 0
         self.total_cost = 0.0
@@ -45,13 +46,46 @@ class TestCaseGenerator:
     def select_random_problem(self) -> Dict[str, Any]:
         """Randomly select a problem from the dataset."""
         return random.choice(self.problems)
+    
+    def extract_function_signature(self, prompt: str, entry_point: str) -> str:
+        """Extract just the function signature without docstring."""
+        lines = prompt.split('\n')
+        signature_lines = []
+        in_signature = False
+        
+        for line in lines:
+            if line.strip().startswith(f'def {entry_point}('):
+                in_signature = True
+                signature_lines.append(line)
+            elif in_signature:
+                if line.strip().startswith('"""') or line.strip().startswith("'''"):
+                    # Stop at docstring
+                    break
+                elif line.strip() and not line.startswith(' ') and not line.startswith('\t'):
+                    # Stop at next top-level statement
+                    break
+                else:
+                    signature_lines.append(line)
+                    if line.strip().endswith(':'):
+                        # End of function signature
+                        break
+        
+        return '\n'.join(signature_lines)
 
     def generate_prompt(self, problem: Dict[str, Any]) -> str:
         """Create a prompt for Claude to generate test cases."""
+        
+        if self.include_docstring:
+            # Include full function signature with docstring
+            function_info = problem['prompt']
+        else:
+            # Include only function signature without docstring
+            function_info = self.extract_function_signature(problem['prompt'], problem['entry_point'])
+        
         prompt = f"""Generate pytest test cases for this function. Return ONLY executable Python code, no explanations or markdown.
 
-Function signature and description:
-{problem['prompt']}
+Function signature:
+{function_info}
 
 Canonical implementation:
 ```python
@@ -200,7 +234,11 @@ Start your response with "import pytest" and include only executable Python test
         output_path.mkdir(exist_ok=True)
 
         # Create filename from task_id
-        filename = f"test_{problem['task_id'].replace('/', '_').lower()}.py"
+        base_name = f"test_{problem['task_id'].replace('/', '_').lower()}"
+        if self.include_docstring:
+            filename = f"{base_name}_include_docstring.py"
+        else:
+            filename = f"{base_name}.py"
         filepath = output_path / filename
 
         # Add the function implementation and test cases
@@ -282,6 +320,11 @@ def main():
         "--task-id", help="Specific task ID to generate tests for (optional)"
     )
     parser.add_argument("--api-key", help="Claude API key (or set in .env file)")
+    parser.add_argument(
+        "--include-docstring", 
+        action="store_true",
+        help="Include function docstring in prompt (default: only function signature)"
+    )
 
     args = parser.parse_args()
 
@@ -296,7 +339,7 @@ def main():
 
     try:
         # Initialize generator
-        generator = TestCaseGenerator(api_key)
+        generator = TestCaseGenerator(api_key, include_docstring=args.include_docstring)
 
         # Load dataset
         generator.load_dataset(args.dataset)
