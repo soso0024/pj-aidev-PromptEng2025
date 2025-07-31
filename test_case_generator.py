@@ -11,6 +11,7 @@ import random
 import os
 import argparse
 import re
+import ast
 from pathlib import Path
 from typing import Dict, List, Any
 import anthropic
@@ -18,11 +19,19 @@ from dotenv import load_dotenv
 
 
 class TestCaseGenerator:
-    def __init__(self, api_key: str, include_docstring: bool = False):
+    def __init__(
+        self,
+        api_key: str,
+        include_docstring: bool = False,
+        include_ast: bool = False,
+        show_prompt: bool = False,
+    ):
         """Initialize the test case generator with Claude API client."""
         self.client = anthropic.Anthropic(api_key=api_key)
         self.problems = []
         self.include_docstring = include_docstring
+        self.include_ast = include_ast
+        self.show_prompt = show_prompt
         self.total_input_tokens = 0
         self.total_output_tokens = 0
         self.total_cost = 0.0
@@ -76,6 +85,51 @@ class TestCaseGenerator:
 
         return "\n".join(signature_lines)
 
+    def generate_ast_string(
+        self, canonical_solution: str, prompt: str, entry_point: str
+    ) -> str:
+        """Generate a readable AST representation of the canonical solution."""
+        try:
+            # Extract function signature from the prompt more robustly
+            # Find the def line and continue until we hit the docstring or end of signature
+            lines = prompt.split("\n")
+            signature_lines = []
+            signature_started = False
+
+            for line in lines:
+                if line.strip().startswith(f"def {entry_point}("):
+                    signature_started = True
+                    signature_lines.append(line.strip())
+                elif signature_started:
+                    if line.strip().startswith('"""') or line.strip().startswith("'''"):
+                        # Hit docstring, stop
+                        break
+                    elif line.strip().endswith(":") or line.strip() == "":
+                        # End of signature or empty line
+                        if line.strip().endswith(":"):
+                            signature_lines.append(line.strip())
+                        break
+                    else:
+                        signature_lines.append(line.strip())
+
+            if not signature_lines:
+                return "Error: Could not extract function signature"
+
+            signature = " ".join(signature_lines)
+            if not signature.endswith(":"):
+                signature += ":"
+
+            # Create complete function code
+            full_function = f"{signature}\n{canonical_solution}"
+
+            # Parse the AST
+            tree = ast.parse(full_function)
+
+            # Format the AST as a readable string
+            return ast.dump(tree, indent=2)
+        except Exception as e:
+            return f"Error generating AST: {e}"
+
     def generate_prompt(self, problem: Dict[str, Any]) -> str:
         """Create a prompt for Claude to generate test cases."""
 
@@ -88,6 +142,18 @@ class TestCaseGenerator:
                 problem["prompt"], problem["entry_point"]
             )
 
+        ast_section = ""
+        if self.include_ast:
+            ast_repr = self.generate_ast_string(
+                problem["canonical_solution"], problem["prompt"], problem["entry_point"]
+            )
+            ast_section = f"""
+
+AST representation of canonical solution:
+```
+{ast_repr}
+```"""
+
         prompt = f"""Generate pytest test cases for this function. Return ONLY executable Python code, no explanations or markdown.
 
 Function signature:
@@ -97,7 +163,7 @@ Canonical implementation:
 ```python
 def {problem['entry_point']}({problem['prompt'].split('def ' + problem['entry_point'] + '(')[1].split(')')[0]}):
 {problem['canonical_solution']}
-```
+```{ast_section}
 
 Requirements:
 - Return ONLY Python code that can be executed directly
@@ -106,6 +172,9 @@ Requirements:
 - Include necessary imports
 - DO NOT include explanations, markdown, or the original function implementation
 - DO NOT wrap code in ```python``` blocks
+- IMPORTANT: When using @pytest.mark.parametrize, properly escape quotes in parameter values
+- Use single quotes inside double quotes or vice versa, or use triple quotes for complex strings
+- Example: @pytest.mark.parametrize("input,expected", [("test", True), ('another', False)])
 
 Start your response with "import pytest" and include only executable Python test code:"""
 
@@ -123,11 +192,12 @@ Start your response with "import pytest" and include only executable Python test
         code_started = False
 
         for line in lines:
-            # Start collecting lines when we see imports or function definitions
+            # Start collecting lines when we see imports, decorators, or function definitions
             if not code_started and (
                 line.strip().startswith("import ")
                 or line.strip().startswith("from ")
                 or line.strip().startswith("def ")
+                or line.strip().startswith("@pytest")
                 or line.strip().startswith("@")
             ):
                 code_started = True
@@ -135,51 +205,50 @@ Start your response with "import pytest" and include only executable Python test
             if code_started:
                 code_lines.append(line)
 
-        # Remove explanatory text after the last function/code
-        final_code = []
-        for line in code_lines:
-            # Stop at explanatory text (lines that are clearly not code)
-            if (
-                line.strip()
-                and not line.strip().startswith("#")
-                and not line.strip().startswith("import")
-                and not line.strip().startswith("from")
-                and not line.strip().startswith("def")
-                and not line.strip().startswith("@")
-                and not line.strip().startswith("assert")
-                and not line.strip().startswith("with")
-                and not line.strip().startswith("if")
-                and not line.strip().startswith("for")
-                and not line.strip().startswith("return")
-                and not line.strip().startswith("yield")
-                and not line.strip().startswith("raise")
-                and not line.strip().startswith("try")
-                and not line.strip().startswith("except")
-                and not line.strip().startswith("finally")
-                and not line.strip().startswith("while")
-                and not line.strip().startswith("elif")
-                and not line.strip().startswith("else")
-                and not line.strip().startswith("pass")
-                and not line.strip().startswith("break")
-                and not line.strip().startswith("continue")
-                and not line.strip().startswith("class")
-                and not line.strip().startswith('"""')
-                and not line.strip().startswith("'''")
-                and not "=" in line
-                and not line.strip().endswith(":")
-                and not line.strip().startswith(")")
-            ):
-                # This looks like explanatory text, stop here
-                break
-            final_code.append(line)
+        # Try to validate the code by checking for syntax errors
+        try:
+            result = "\n".join(code_lines).strip()
+            # Basic validation - try to compile the code
+            compile(result, "<string>", "exec")
 
-        result = "\n".join(final_code).strip()
+            # If successful and contains test functions, return it
+            if result and "def test_" in result:
+                return result
+        except SyntaxError:
+            # If there's a syntax error, try to return the original response
+            pass
 
-        # If the result is empty or doesn't contain test functions, return the original
-        if not result or "def test_" not in result:
-            return raw_response
+        # Fallback: if validation fails, return the original response
+        return raw_response
 
-        return result
+    def display_prompt_and_confirm(self, prompt: str) -> bool:
+        """Display the prompt to user and ask for confirmation."""
+        print("\n" + "=" * 80)
+        print("PROMPT PREVIEW")
+        print("=" * 80)
+        print(prompt)
+        print("=" * 80)
+
+        # Estimate token count (rough approximation: 1 token ≈ 4 chars)
+        estimated_tokens = len(prompt) // 4
+        estimated_cost = (estimated_tokens / 1000) * self.input_cost_per_1k_tokens
+
+        print(f"Estimated input tokens: {estimated_tokens}")
+        print(f"Estimated input cost: ${estimated_cost:.6f}")
+        print("=" * 80)
+
+        while True:
+            response = input("\nProceed with this prompt? (y/n/q): ").lower().strip()
+            if response in ["y", "yes"]:
+                return True
+            elif response in ["n", "no"]:
+                print("Prompt rejected. Exiting...")
+                return False
+            elif response in ["q", "quit"]:
+                print("Quitting...")
+                return False
+            else:
+                print("Please enter 'y' (yes), 'n' (no), or 'q' (quit)")
 
     def calculate_cost(self, input_tokens: int, output_tokens: int) -> float:
         """Calculate the cost based on token usage."""
@@ -201,6 +270,11 @@ Start your response with "import pytest" and include only executable Python test
         prompt = self.generate_prompt(problem)
 
         print(f"Generating test cases for {problem['task_id']}...")
+
+        # Show prompt and get confirmation if requested
+        if self.show_prompt:
+            if not self.display_prompt_and_confirm(prompt):
+                return ""
 
         try:
             response = self.client.messages.create(
@@ -241,10 +315,14 @@ Start your response with "import pytest" and include only executable Python test
 
         # Create filename from task_id
         base_name = f"test_{problem['task_id'].replace('/', '_').lower()}"
+        filename_parts = [base_name]
+
         if self.include_docstring:
-            filename = f"{base_name}_include_docstring.py"
-        else:
-            filename = f"{base_name}.py"
+            filename_parts.append("docstring")
+        if self.include_ast:
+            filename_parts.append("ast")
+
+        filename = f"{'_'.join(filename_parts)}.py"
         filepath = output_path / filename
 
         # Add the function implementation and test cases
@@ -331,6 +409,16 @@ def main():
         action="store_true",
         help="Include function docstring in prompt (default: only function signature)",
     )
+    parser.add_argument(
+        "--include-ast",
+        action="store_true",
+        help="Include AST of canonical solution in prompt",
+    )
+    parser.add_argument(
+        "--show-prompt",
+        action="store_true",
+        help="Display the prompt before sending to LLM and ask for confirmation",
+    )
 
     args = parser.parse_args()
 
@@ -345,7 +433,12 @@ def main():
 
     try:
         # Initialize generator
-        generator = TestCaseGenerator(api_key, include_docstring=args.include_docstring)
+        generator = TestCaseGenerator(
+            api_key,
+            include_docstring=args.include_docstring,
+            include_ast=args.include_ast,
+            show_prompt=args.show_prompt,
+        )
 
         # Load dataset
         generator.load_dataset(args.dataset)

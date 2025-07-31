@@ -37,53 +37,51 @@ import pytest
 from typing import List
 
 @pytest.mark.parametrize("input_str,expected", [
-    ("(()()) (()) ()", ["(()())", "(())", "()"]),
-    ("", []),
-    ("()", ["()"]),
+    ("(())", ["(())"]),
+    ("()()", ["()", "()"]),
     ("((()))", ["((()))"]),
-    ("(()) ()", ["(())", "()"]),
-    ("((())) ((()))", ["((()))", "((()))"]),
-    ("(((()))) (()) () ((())())", ["(((()))))", "(())", "()", "((())())"]),
+    ("((())())", ["((())())"]),
+    ("((()))(())", ["((()))", "(())"]),
+    ("(((()))((())))", ["((()))", "((()))"]),
+    ("()", ["()"]),
+    ("((()())(())())", ["((()())(())())"]),
+    ("(()(()))", ["(()(()))"]),
+    ("(()())(())", ["(()())", "(())"]),
+    ("", []),
+    ("((())())((())())", ["((())())", "((())())"]),
 ])
-def test_separate_paren_groups_normal_cases(input_str: str, expected: List[str]):
+def test_separate_paren_groups_valid(input_str: str, expected: List[str]):
     assert separate_paren_groups(input_str) == expected
 
-@pytest.mark.parametrize("input_str", [
-    "((",
+@pytest.mark.parametrize("invalid_input", [
+    "(",
     ")",
     "())",
     "(()",
     ")(",
-    ")()",
+    "a()",
+    "(a)",
+    "((a))",
+    None,
 ])
-def test_separate_paren_groups_invalid_input(input_str: str):
-    with pytest.raises(Exception):
-        separate_paren_groups(input_str)
+def test_separate_paren_groups_invalid(invalid_input):
+    with pytest.raises((ValueError, TypeError)):
+        separate_paren_groups(invalid_input)
+
+def test_separate_paren_groups_empty():
+    assert separate_paren_groups("") == []
 
 def test_separate_paren_groups_nested():
-    input_str = "((()(()())))((()))"
-    expected = ["((()(()())))","((()))"]
+    input_str = "((())(()))(((())))"
+    expected = ["((())(()))", "((()))""]
     assert separate_paren_groups(input_str) == expected
 
-def test_separate_paren_groups_multiple_spaces():
-    input_str = "(())    ()      ((()))"
-    expected = ["(())", "()", "((()))"]
+def test_separate_paren_groups_multiple():
+    input_str = "()(())(((())))"
+    expected = ["()", "(())", "((()))""]
     assert separate_paren_groups(input_str) == expected
-
-def test_separate_paren_groups_single_char():
-    with pytest.raises(Exception):
-        separate_paren_groups("a")
-
-def test_separate_paren_groups_with_invalid_chars():
-    with pytest.raises(Exception):
-        separate_paren_groups("(a)")
 
 def test_separate_paren_groups_complex():
-    input_str = "()(()())((()())(()))"
-    expected = ["()", "(()())", "((()())(()))"]
-    assert separate_paren_groups(input_str) == expected
-
-def test_separate_paren_groups_many_nested():
-    input_str = "((((((()))))()))"
-    expected = ["((((((()))))()))"]
+    input_str = "(()(()()))(())(((())))"
+    expected = ["(()(()()))", "(())", "((()))""]
     assert separate_paren_groups(input_str) == expected
