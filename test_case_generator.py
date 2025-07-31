@@ -46,42 +46,48 @@ class TestCaseGenerator:
     def select_random_problem(self) -> Dict[str, Any]:
         """Randomly select a problem from the dataset."""
         return random.choice(self.problems)
-    
+
     def extract_function_signature(self, prompt: str, entry_point: str) -> str:
         """Extract just the function signature without docstring."""
-        lines = prompt.split('\n')
+        lines = prompt.split("\n")
         signature_lines = []
         in_signature = False
-        
+
         for line in lines:
-            if line.strip().startswith(f'def {entry_point}('):
+            if line.strip().startswith(f"def {entry_point}("):
                 in_signature = True
                 signature_lines.append(line)
             elif in_signature:
                 if line.strip().startswith('"""') or line.strip().startswith("'''"):
                     # Stop at docstring
                     break
-                elif line.strip() and not line.startswith(' ') and not line.startswith('\t'):
+                elif (
+                    line.strip()
+                    and not line.startswith(" ")
+                    and not line.startswith("\t")
+                ):
                     # Stop at next top-level statement
                     break
                 else:
                     signature_lines.append(line)
-                    if line.strip().endswith(':'):
+                    if line.strip().endswith(":"):
                         # End of function signature
                         break
-        
-        return '\n'.join(signature_lines)
+
+        return "\n".join(signature_lines)
 
     def generate_prompt(self, problem: Dict[str, Any]) -> str:
         """Create a prompt for Claude to generate test cases."""
-        
+
         if self.include_docstring:
             # Include full function signature with docstring
-            function_info = problem['prompt']
+            function_info = problem["prompt"]
         else:
             # Include only function signature without docstring
-            function_info = self.extract_function_signature(problem['prompt'], problem['entry_point'])
-        
+            function_info = self.extract_function_signature(
+                problem["prompt"], problem["entry_point"]
+            )
+
         prompt = f"""Generate pytest test cases for this function. Return ONLY executable Python code, no explanations or markdown.
 
 Function signature:
@@ -321,9 +327,9 @@ def main():
     )
     parser.add_argument("--api-key", help="Claude API key (or set in .env file)")
     parser.add_argument(
-        "--include-docstring", 
+        "--include-docstring",
         action="store_true",
-        help="Include function docstring in prompt (default: only function signature)"
+        help="Include function docstring in prompt (default: only function signature)",
     )
 
     args = parser.parse_args()
