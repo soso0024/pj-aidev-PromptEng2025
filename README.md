@@ -29,17 +29,20 @@ A Python tool that automatically generates comprehensive pytest test cases for H
 Choose one of these methods:
 
 #### Method 1: Environment Variable
+
 ```bash
 export ANTHROPIC_API_KEY="your-api-key-here"
 ```
 
 #### Method 2: .env File (Recommended)
+
 1. Edit the `.env` file:
    ```bash
    ANTHROPIC_API_KEY=your-api-key-here
    ```
 
 #### Method 3: Command Line
+
 ```bash
 python test_case_generator.py --api-key "your-api-key-here"
 ```
@@ -49,55 +52,63 @@ python test_case_generator.py --api-key "your-api-key-here"
 ### Basic Usage
 
 Generate test cases for a random problem:
+
 ```bash
 python test_case_generator.py
 ```
 
 ### Command Line Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--dataset` | Path to HumanEval dataset file | `dataset/HumanEval.jsonl` |
-| `--output-dir` | Output directory for test files | `generated_tests` |
-| `--task-id` | Specific task ID to generate tests for | Random selection |
-| `--api-key` | Claude API key | From .env or environment |
-| `--include-docstring` | Include function docstring in prompt | `False` (signature only) |
-| `--include-ast` | Include AST of canonical solution in prompt | `False` |
-| `--show-prompt` | Display prompt before sending to LLM and ask for confirmation | `False` |
+| Option                | Description                                                   | Default                   |
+| --------------------- | ------------------------------------------------------------- | ------------------------- |
+| `--dataset`           | Path to HumanEval dataset file                                | `dataset/HumanEval.jsonl` |
+| `--output-dir`        | Output directory for test files                               | `generated_tests`         |
+| `--task-id`           | Specific task ID to generate tests for                        | Random selection          |
+| `--api-key`           | Claude API key                                                | From .env or environment  |
+| `--include-docstring` | Include function docstring in prompt                          | `False` (signature only)  |
+| `--include-ast`       | Include AST of canonical solution in prompt                   | `False`                   |
+| `--show-prompt`       | Display prompt before sending to LLM and ask for confirmation | `False`                   |
 
 ### Examples
 
 #### Generate test for a random problem:
+
 ```bash
 python test_case_generator.py
 ```
 
 #### Generate test for a specific problem:
+
 ```bash
 python test_case_generator.py --task-id "HumanEval/0"
 ```
 
 #### Include docstring for more context (uses more tokens):
+
 ```bash
 python test_case_generator.py --include-docstring
 ```
 
 #### Include AST representation for enhanced understanding:
+
 ```bash
 python test_case_generator.py --include-ast
 ```
 
 #### Preview prompt before sending to LLM:
+
 ```bash
 python test_case_generator.py --show-prompt
 ```
 
 #### Use custom dataset and output directory:
+
 ```bash
 python test_case_generator.py --dataset path/to/custom.jsonl --output-dir my_tests
 ```
 
 #### Combine options:
+
 ```bash
 python test_case_generator.py --task-id "HumanEval/5" --include-docstring --include-ast --show-prompt --output-dir custom_tests
 ```
@@ -109,6 +120,7 @@ python test_case_generator.py --task-id "HumanEval/5" --include-docstring --incl
 For each test generation, the tool creates:
 
 1. **Test file**: `test_humaneval_X.py` (or `test_humaneval_X_docstring.py`, `test_humaneval_X_ast.py`, `test_humaneval_X_docstring_ast.py`)
+
    - Contains the original function implementation
    - Comprehensive pytest test cases
    - Ready to run with pytest
@@ -128,6 +140,7 @@ The tool automatically adjusts filenames based on options used:
 - With both: `test_humaneval_0_docstring_ast.py`
 
 ### Example Output Structure
+
 ```
 generated_tests/
    test_humaneval_0.py                    # Basic generation
@@ -141,6 +154,7 @@ generated_tests/
 ```
 
 ### Console Output Example
+
 ```
 Loading dataset from dataset/HumanEval.jsonl...
 Loaded 164 problems from dataset
@@ -158,10 +172,6 @@ Estimated input cost: $0.003702
 ================================================================================
 
 Proceed with this prompt? (y/n/q): y
-
-  Input tokens: 1,234
-  Output tokens: 567
-  Cost: $0.012345
 Test cases saved to generated_tests/test_humaneval_139_ast.py
 
 ✅ Successfully generated test cases!
@@ -187,21 +197,25 @@ cd generated_tests
 ```
 
 ### Run specific test file:
+
 ```bash
 pytest test_humaneval_0.py -v
 ```
 
 ### Run with coverage:
+
 ```bash
 pytest test_humaneval_0.py -v --cov
 ```
 
 ### Run with detailed coverage report:
+
 ```bash
 pytest test_humaneval_0.py -v --cov --cov-report=html
 ```
 
 ### Run all generated tests:
+
 ```bash
 pytest -v --cov
 ```
@@ -213,33 +227,41 @@ pytest -v --cov
 The new options provide different levels of context and cost:
 
 #### Default (Signature Only) - Lowest Cost:
+
 ```bash
 python test_case_generator.py
 ```
+
 - Sends only function signature: `def function_name(params) -> return_type:`
 - Lowest token usage = lowest cost
 - Good for most cases
 
 #### With Docstring - Medium Cost, More Context:
+
 ```bash
 python test_case_generator.py --include-docstring
 ```
+
 - Sends full function signature + docstring with examples
 - Medium token usage = medium cost
 - Better test quality with more context
 
 #### With AST - Higher Cost, Enhanced Understanding:
+
 ```bash
 python test_case_generator.py --include-ast
 ```
+
 - Sends function signature + AST representation of canonical solution
 - Higher token usage = higher cost
 - Enhanced code structure understanding for better tests
 
 #### With Both - Highest Cost, Maximum Context:
+
 ```bash
 python test_case_generator.py --include-docstring --include-ast
 ```
+
 - Sends full function signature + docstring + AST representation
 - Highest token usage = highest cost
 - Maximum context for highest quality tests
@@ -247,6 +269,7 @@ python test_case_generator.py --include-docstring --include-ast
 ### Interactive Prompt Preview
 
 Use `--show-prompt` to:
+
 - Preview the exact prompt that will be sent to Claude
 - See estimated token count and cost
 - Decide whether to proceed, modify, or cancel
@@ -255,10 +278,12 @@ Use `--show-prompt` to:
 ### Pricing Information
 
 Current Claude 3.5 Sonnet pricing:
+
 - **Input tokens**: $3 per 1M tokens
 - **Output tokens**: $15 per 1M tokens
 
 Typical usage per problem:
+
 - **Signature only**: ~800-1,200 input tokens
 - **With docstring**: ~1,500-2,500 input tokens
 - **With AST**: ~1,000-1,800 input tokens
@@ -302,22 +327,27 @@ Each `.stats.json` file contains:
 ### Common Issues
 
 1. **"No such file or directory: 'HumanEval.jsonl'"**
+
    - Make sure the dataset file exists in the correct location
    - Use `--dataset` option to specify the correct path
 
 2. **"API key not found"**
+
    - Set your API key using one of the configuration methods above
    - Make sure the `.env` file is in the same directory as the script
 
 3. **"Permission denied"**
+
    - Check file permissions for the output directory
    - Make sure you have write access to the target location
 
 4. **Import errors in generated tests**
+
    - The generated tests import the function from the same file
    - Make sure to run pytest from the correct directory
 
 5. **EOF when reading a line (with --show-prompt)**
+
    - This happens when running non-interactively
    - Either run in an interactive terminal or omit `--show-prompt`
 
@@ -329,6 +359,7 @@ Each `.stats.json` file contains:
 ### Getting Help
 
 For additional help:
+
 ```bash
 python test_case_generator.py --help
 ```
@@ -336,6 +367,7 @@ python test_case_generator.py --help
 ## Advanced Usage Tips
 
 ### Batch Generation with Different Options
+
 ```bash
 # Generate multiple variants of the same problem
 python test_case_generator.py --task-id "HumanEval/0"
@@ -345,6 +377,7 @@ python test_case_generator.py --task-id "HumanEval/0" --include-docstring --incl
 ```
 
 ### Cost-Effective Workflow
+
 1. Start with `--show-prompt` to understand token usage
 2. Use basic generation for simple functions
 3. Add `--include-docstring` for complex functions needing examples
@@ -352,7 +385,9 @@ python test_case_generator.py --task-id "HumanEval/0" --include-docstring --incl
 5. Use both options only for the most challenging problems
 
 ### Quality Comparison
+
 Test the same problem with different options to compare:
+
 - Test coverage percentage
 - Edge case detection
 - Code quality and readability

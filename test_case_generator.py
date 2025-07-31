@@ -295,10 +295,6 @@ Start your response with "import pytest" and include only executable Python test
             cost = self.calculate_cost(input_tokens, output_tokens)
             self.total_cost += cost
 
-            print(f"  Input tokens: {input_tokens}")
-            print(f"  Output tokens: {output_tokens}")
-            print(f"  Cost: ${cost:.6f}")
-
             raw_response = response.content[0].text
             return self.clean_generated_code(raw_response)
 
