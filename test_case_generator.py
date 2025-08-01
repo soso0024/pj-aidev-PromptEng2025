@@ -280,7 +280,7 @@ Start your response with "import pytest" and include only executable Python test
             response = self.client.messages.create(
                 model="claude-3-5-sonnet-20241022",
                 max_tokens=2000,
-                temperature=0.1,
+                temperature=0.0,  # A temperature of 0.0 results in the most deterministic and consistent responses, as the model will consistently choose the most probable words and sequences.
                 messages=[{"role": "user", "content": prompt}],
             )
 
