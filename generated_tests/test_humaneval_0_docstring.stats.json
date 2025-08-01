@@ -1,0 +1,8 @@
+{
+  "total_input_tokens": 405,
+  "total_output_tokens": 602,
+  "total_tokens": 1007,
+  "total_cost_usd": 0.010245,
+  "task_id": "HumanEval/0",
+  "generated_file": "generated_tests/test_humaneval_0_docstring.py"
+}

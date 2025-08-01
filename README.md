@@ -196,25 +196,72 @@ Navigate to the output directory and run pytest:
 cd generated_tests
 ```
 
-### Run specific test file:
+### Common pytest Options
+
+| Option | Description |
+|--------|-------------|
+| `-v, --verbose` | Verbose output showing individual test names and results |
+| `-s` | Don't capture output (show print statements) |
+| `-x` | Stop on first failure |
+| `--tb=short` | Shorter traceback format |
+| `--tb=line` | One line per failure |
+| `--tb=no` | No traceback |
+| `-k EXPRESSION` | Run tests matching keyword expression |
+| `--maxfail=N` | Stop after N failures |
+| `-q, --quiet` | Quiet mode (less verbose) |
+| `--collect-only` | Show which tests would be run without executing |
+| `--lf, --last-failed` | Run only tests that failed in last run |
+| `--ff, --failed-first` | Run failed tests first, then rest |
+
+### Coverage Options
+
+| Option | Description |
+|--------|-------------|
+| `--cov` | Generate coverage report |
+| `--cov-report=term` | Terminal coverage report (default) |
+| `--cov-report=html` | HTML coverage report |
+| `--cov-report=xml` | XML coverage report |
+| `--cov-fail-under=N` | Fail if coverage is under N% |
+
+### Example Usage
+
+#### Run specific test file:
 
 ```bash
 pytest test_humaneval_0.py -v
 ```
 
-### Run with coverage:
+#### Run with coverage:
 
 ```bash
 pytest test_humaneval_0.py -v --cov
 ```
 
-### Run with detailed coverage report:
+#### Run with detailed coverage report:
 
 ```bash
 pytest test_humaneval_0.py -v --cov --cov-report=html
 ```
 
-### Run all generated tests:
+#### Stop on first failure with short traceback:
+
+```bash
+pytest test_humaneval_0.py -v -x --tb=short
+```
+
+#### Run only failed tests from last run:
+
+```bash
+pytest --lf -v
+```
+
+#### Run tests matching a keyword:
+
+```bash
+pytest -k "edge_case" -v
+```
+
+#### Run all generated tests:
 
 ```bash
 pytest -v --cov
