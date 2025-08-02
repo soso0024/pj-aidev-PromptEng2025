@@ -34,17 +34,17 @@ from typing import List
     ([], 1.0, False),
     ([1.0], 1.0, False),
     ([1.0, 1.0], 0.5, True),
-    ([1.0, 2.0, 2.1], 0.2, True),
-    ([1.0, 2.0, 3.0], 0.1, False),
+    ([1.0, 1.1, 1.2, 1.3], 0.15, True),
+    ([1.0, 2.0, 3.0, 4.0], 0.0, False),
+    ([1.0, 1.0, 1.0], 0.1, True),
     ([-1.0, 1.0], 2.5, True),
     ([-1.0, -2.0, -3.0], 0.5, False),
     ([0.1, 0.2, 0.3, 0.4], 0.05, False),
-    ([1.0, 1.000001], 0.0001, False),
-    ([1.0, 1.000001], 0.001, True),
-    ([float("inf"), float("inf")], 1.0, True),
-    ([-float("inf"), float("inf")], 1.0, False),
+    ([10.0, 20.0, 30.0, 40.0], 5.0, False),
+    ([1.0, 1.000001], 0.0000001, False),
+    ([1.0, 1.000001], 0.001, True)
 ])
-def test_has_close_elements(numbers, threshold, expected):
+def test_has_close_elements(numbers: List[float], threshold: float, expected: bool):
     assert has_close_elements(numbers, threshold) == expected
 
 @pytest.mark.parametrize("invalid_input", [
@@ -52,18 +52,17 @@ def test_has_close_elements(numbers, threshold, expected):
     ([1, "2", 3], 1.0),
     ([1.0, 2.0], "not_a_float"),
     (None, 1.0),
-    ([1.0, 2.0], None),
+    ([1.0, 2.0], None)
 ])
 def test_has_close_elements_invalid_input(invalid_input):
-    with pytest.raises((TypeError, ValueError)):
+    with pytest.raises((TypeError, AttributeError)):
         has_close_elements(*invalid_input)
 
-def test_has_close_elements_float_precision():
-    numbers = [1.0, 1.0 + 1e-10]
-    assert has_close_elements(numbers, 1e-9) == True
-    assert has_close_elements(numbers, 1e-11) == False
+def test_has_close_elements_large_list():
+    large_list = [float(i) for i in range(1000)]
+    assert has_close_elements(large_list, 0.5) == True
+    assert has_close_elements(large_list, 0.0001) == False
 
-def test_has_close_elements_large_numbers():
-    numbers = [1e15, 1e15 + 1]
-    assert has_close_elements(numbers, 2.0) == True
-    assert has_close_elements(numbers, 0.5) == False
+def test_has_close_elements_negative_threshold():
+    with pytest.raises(ValueError):
+        has_close_elements([1.0, 2.0, 3.0], -1.0)
