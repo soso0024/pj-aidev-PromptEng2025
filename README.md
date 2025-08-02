@@ -10,6 +10,10 @@ A Python tool that automatically generates comprehensive pytest test cases for H
 - **Configurable docstring inclusion** to control token usage
 - **AST representation inclusion** for enhanced code understanding
 - **Interactive prompt preview** with cost estimation and confirmation
+- **Automatic test evaluation** with pytest execution and error detection
+- **Intelligent error fixing** using LLM feedback loop with white box testing
+- **Transparent debugging** with detailed error analysis and fix tracking
+- **Complete cost tracking** including all evaluation and fix attempts
 - **Comprehensive statistics** saved alongside test files
 - **Clean Python output** without markdown or explanations
 
@@ -68,6 +72,9 @@ python test_case_generator.py
 | `--include-docstring` | Include function docstring in prompt                          | `False` (signature only)  |
 | `--include-ast`       | Include AST of canonical solution in prompt                   | `False`                   |
 | `--show-prompt`       | Display prompt before sending to LLM and ask for confirmation | `False`                   |
+| `--disable-evaluation` | Disable automatic test evaluation and error fixing           | `False` (evaluation enabled) |
+| `--max-fix-attempts`  | Maximum number of attempts to fix test errors                 | `3`                       |
+| `--quiet-evaluation`  | Disable verbose output during error fixing process            | `False` (verbose enabled) |
 
 ### Examples
 
@@ -111,6 +118,78 @@ python test_case_generator.py --dataset path/to/custom.jsonl --output-dir my_tes
 
 ```bash
 python test_case_generator.py --task-id "HumanEval/5" --include-docstring --include-ast --show-prompt --output-dir custom_tests
+```
+
+### Evaluation and Error Fixing
+
+The tool automatically evaluates generated test cases and fixes errors using an intelligent feedback loop:
+
+#### Generate with automatic evaluation (default):
+
+```bash
+python test_case_generator.py --task-id "HumanEval/0"
+```
+
+This will:
+1. Generate initial test cases
+2. Run `pytest test_humaneval_0.py --cov -v` automatically
+3. If tests fail, analyze errors and send them to LLM for fixing
+4. Repeat up to 3 times until tests pass
+5. Show transparent debugging information throughout
+
+#### Control evaluation behavior:
+
+```bash
+# Disable evaluation (original behavior)
+python test_case_generator.py --task-id "HumanEval/0" --disable-evaluation
+
+# Set maximum fix attempts 
+python test_case_generator.py --task-id "HumanEval/0" --max-fix-attempts 5
+
+# Quiet mode (less verbose output during fixing)
+python test_case_generator.py --task-id "HumanEval/0" --quiet-evaluation
+
+# Interactive mode (approve each fix attempt)
+python test_case_generator.py --task-id "HumanEval/0" --show-prompt
+```
+
+#### White Box Error Fixing
+
+When evaluation is enabled (default), you'll see transparent debugging:
+
+```
+🧪 Evaluating test file: test_humaneval_0.py
+❌ Tests failed on attempt 1
+
+================================================================================
+📋 PYTEST ERROR DETAILS - Attempt 1
+================================================================================
+✅ test_function_valid_inputs[case1] PASSED
+❌ test_function_valid_inputs[case2] FAILED
+🔍 FAILURE DETAILS:
+AssertionError: assert [1, 2] == [1]
+================================================================================
+
+🔧 Attempting to fix errors...
+
+================================================================================
+🤖 LLM FIX PROMPT - Attempt 1
+================================================================================
+[Complete fix prompt with function implementation and error details shown]
+================================================================================
+
+🤖 Sending fix request to LLM (attempt 1)...
+💰 Fix attempt 1 cost: $0.022434 (Input: 4043, Output: 687)
+
+================================================================================
+🔧 LLM FIX RESPONSE - Attempt 1
+================================================================================
+[LLM's corrected test code shown]
+================================================================================
+
+📝 Updated test file with fixes
+✅ Tests passed on attempt 2
+🎉 Test generation and evaluation completed successfully!
 ```
 
 ## Output
@@ -331,12 +410,23 @@ Current Claude 3.5 Sonnet pricing:
 
 Typical usage per problem:
 
+**Initial Generation:**
 - **Signature only**: ~800-1,200 input tokens
-- **With docstring**: ~1,500-2,500 input tokens
+- **With docstring**: ~1,500-2,500 input tokens  
 - **With AST**: ~1,000-1,800 input tokens
 - **With both**: ~2,000-3,500 input tokens
 - **Generated output**: ~500-1,000 tokens
-- **Cost per problem**: ~$0.01-0.07
+
+**With Evaluation and Error Fixing:**
+- **Additional input per fix**: ~1,500-4,000 tokens (includes error output + function implementation)
+- **Additional output per fix**: ~500-1,500 tokens
+- **Total fix attempts**: 0-3 (average: 1-2)
+
+**Total Cost Examples:**
+- **No evaluation**: ~$0.01-0.05 per problem
+- **With evaluation (no fixes needed)**: ~$0.01-0.05 per problem  
+- **With evaluation (1-2 fix attempts)**: ~$0.02-0.08 per problem
+- **With evaluation (3 fix attempts)**: ~$0.03-0.12 per problem
 
 ## File Structure
 
@@ -360,14 +450,25 @@ Each `.stats.json` file contains:
 
 ```json
 {
-  "total_input_tokens": 1234,
-  "total_output_tokens": 567,
-  "total_tokens": 1801,
-  "total_cost_usd": 0.012345,
-  "task_id": "HumanEval/139",
-  "generated_file": "generated_tests/test_humaneval_139_ast.py"
+  "total_input_tokens": 3876,
+  "total_output_tokens": 2038,
+  "total_tokens": 5914,
+  "total_cost_usd": 0.042198,
+  "task_id": "HumanEval/4",
+  "generated_file": "generated_tests/test_humaneval_4.py",
+  "evaluation_enabled": true,
+  "evaluation_success": true,
+  "fix_attempts_used": 3,
+  "max_fix_attempts": 3
 }
 ```
+
+**New fields for evaluation tracking:**
+- `evaluation_enabled`: Whether automatic evaluation was used
+- `evaluation_success`: Whether tests finally passed after fixing
+- `fix_attempts_used`: Number of fix attempts actually used
+- `max_fix_attempts`: Maximum attempts that were configured
+- `total_cost_usd`: Now includes costs from all fix attempts, not just initial generation
 
 ## Troubleshooting
 
@@ -399,9 +500,21 @@ Each `.stats.json` file contains:
    - Either run in an interactive terminal or omit `--show-prompt`
 
 6. **Syntax errors in generated pytest code**
-   - The tool now includes better syntax validation
+   - The tool now includes automatic error fixing with evaluation
    - Improved prompt instructions for proper quote escaping
-   - If issues persist, try without `--include-ast` or `--include-docstring`
+   - If issues persist, try `--disable-evaluation` or `--max-fix-attempts 1`
+
+7. **Evaluation fails or times out**
+   - Check that pytest is installed: `pip install pytest pytest-cov`
+   - Verify the generated test file has no import errors
+   - Use `--quiet-evaluation` to reduce output noise
+   - Try `--disable-evaluation` if evaluation keeps failing
+
+8. **Fix attempts exceed maximum**
+   - Some complex errors may require manual intervention
+   - Check the final error output for specific issues
+   - Try increasing `--max-fix-attempts` or use `--disable-evaluation`
+   - Consider using different generation options (`--include-docstring`, `--include-ast`)
 
 ### Getting Help
 
