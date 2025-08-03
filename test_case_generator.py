@@ -273,21 +273,55 @@ Start your response with "import pytest" and include only executable Python test
             "total_cost_usd": round(self.total_cost, 6),
         }
 
+    def rename_file_with_result(self, original_filepath: str, evaluation_success: bool) -> str:
+        """Rename the test file to include success/failure status."""
+        original_path = Path(original_filepath)
+        
+        # Get the current filename without extension
+        stem = original_path.stem
+        
+        # Remove any existing success/failure suffix
+        if stem.endswith("_success") or stem.endswith("_false"):
+            stem = "_".join(stem.split("_")[:-1])
+        
+        # Add the new suffix based on evaluation result
+        suffix = "success" if evaluation_success else "false"
+        new_stem = f"{stem}_{suffix}"
+        
+        # Create new filepath
+        new_filepath = original_path.parent / f"{new_stem}{original_path.suffix}"
+        
+        # Rename the file
+        if original_path.exists():
+            original_path.rename(new_filepath)
+            print(f"📝 Renamed {original_path.name} → {new_filepath.name}")
+        
+        return str(new_filepath)
+
     def update_final_stats(
         self,
         filepath: str,
         problem: Dict[str, Any],
         evaluation_success: bool,
         fix_attempts_used: int,
-    ) -> None:
-        """Update the stats file with final statistics after evaluation process."""
-        stats_filepath = Path(filepath).with_suffix(".stats.json")
-
+    ) -> str:
+        """Update the stats file with final statistics after evaluation process.
+        
+        Returns:
+            str: The final filepath (potentially renamed)
+        """
+        # Rename file with evaluation result
+        final_filepath = self.rename_file_with_result(filepath, evaluation_success)
+        
+        # Also rename the stats file to match
+        original_stats_filepath = Path(filepath).with_suffix(".stats.json")
+        final_stats_filepath = Path(final_filepath).with_suffix(".stats.json")
+        
         final_stats = self.get_usage_stats()
         final_stats.update(
             {
                 "task_id": problem["task_id"],
-                "generated_file": str(filepath),
+                "generated_file": str(final_filepath),
                 "evaluation_enabled": self.enable_evaluation,
                 "evaluation_success": evaluation_success,
                 "fix_attempts_used": fix_attempts_used,
@@ -295,10 +329,15 @@ Start your response with "import pytest" and include only executable Python test
             }
         )
 
-        with open(stats_filepath, "w", encoding="utf-8") as f:
+        with open(final_stats_filepath, "w", encoding="utf-8") as f:
             json.dump(final_stats, f, indent=2)
 
-        print(f"📊 Final stats saved to {stats_filepath}")
+        # Remove old stats file if it's different
+        if original_stats_filepath != final_stats_filepath and original_stats_filepath.exists():
+            original_stats_filepath.unlink()
+
+        print(f"📊 Final stats saved to {final_stats_filepath}")
+        return str(final_filepath)
 
     def display_pytest_errors(self, error_output: str, attempt: int) -> None:
         """Display pytest errors in a readable format."""
@@ -696,12 +735,12 @@ Corrected code:"""
                 else:
                     print("⚠️  Test generation completed but evaluation failed")
 
-            # Update final stats after complete process
-            self.update_final_stats(
+            # Update final stats after complete process and get final filepath
+            final_filepath = self.update_final_stats(
                 filepath, problem, evaluation_success, fix_attempts_used
             )
 
-            return filepath
+            return final_filepath
         else:
             raise RuntimeError("Failed to generate test cases")
 
@@ -732,12 +771,12 @@ Corrected code:"""
                 else:
                     print("⚠️  Test generation completed but evaluation failed")
 
-            # Update final stats after complete process
-            self.update_final_stats(
+            # Update final stats after complete process and get final filepath
+            final_filepath = self.update_final_stats(
                 filepath, problem, evaluation_success, fix_attempts_used
             )
 
-            return filepath
+            return final_filepath
         else:
             raise RuntimeError("Failed to generate test cases")
 
