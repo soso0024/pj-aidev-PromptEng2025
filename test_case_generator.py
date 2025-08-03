@@ -273,29 +273,31 @@ Start your response with "import pytest" and include only executable Python test
             "total_cost_usd": round(self.total_cost, 6),
         }
 
-    def rename_file_with_result(self, original_filepath: str, evaluation_success: bool) -> str:
+    def rename_file_with_result(
+        self, original_filepath: str, evaluation_success: bool
+    ) -> str:
         """Rename the test file to include success/failure status."""
         original_path = Path(original_filepath)
-        
+
         # Get the current filename without extension
         stem = original_path.stem
-        
+
         # Remove any existing success/failure suffix
         if stem.endswith("_success") or stem.endswith("_false"):
             stem = "_".join(stem.split("_")[:-1])
-        
+
         # Add the new suffix based on evaluation result
         suffix = "success" if evaluation_success else "false"
         new_stem = f"{stem}_{suffix}"
-        
+
         # Create new filepath
         new_filepath = original_path.parent / f"{new_stem}{original_path.suffix}"
-        
+
         # Rename the file
         if original_path.exists():
             original_path.rename(new_filepath)
             print(f"📝 Renamed {original_path.name} → {new_filepath.name}")
-        
+
         return str(new_filepath)
 
     def update_final_stats(
@@ -307,17 +309,17 @@ Start your response with "import pytest" and include only executable Python test
         code_coverage: float = 0.0,
     ) -> str:
         """Update the stats file with final statistics after evaluation process.
-        
+
         Returns:
             str: The final filepath (potentially renamed)
         """
         # Rename file with evaluation result
         final_filepath = self.rename_file_with_result(filepath, evaluation_success)
-        
+
         # Also rename the stats file to match
         original_stats_filepath = Path(filepath).with_suffix(".stats.json")
         final_stats_filepath = Path(final_filepath).with_suffix(".stats.json")
-        
+
         final_stats = self.get_usage_stats()
         final_stats.update(
             {
@@ -335,7 +337,10 @@ Start your response with "import pytest" and include only executable Python test
             json.dump(final_stats, f, indent=2)
 
         # Remove old stats file if it's different
-        if original_stats_filepath != final_stats_filepath and original_stats_filepath.exists():
+        if (
+            original_stats_filepath != final_stats_filepath
+            and original_stats_filepath.exists()
+        ):
             original_stats_filepath.unlink()
 
         print(f"📊 Final stats saved to {final_stats_filepath}")
@@ -524,7 +529,7 @@ Start your response with "import pytest" and include only executable Python test
     def run_pytest(self, test_file_path: str) -> Tuple[bool, str, float]:
         """Run pytest on the test file and return (success, error_output, coverage_percentage)."""
         import re
-        
+
         # Use absolute path and run from project root
         abs_path = Path(test_file_path).resolve()
         cmd = ["pytest", str(abs_path), "--cov", "-v"]
@@ -544,12 +549,12 @@ Start your response with "import pytest" and include only executable Python test
 
             # Combine stdout and stderr for complete error information
             output = f"STDOUT:\n{result.stdout}\n\nSTDERR:\n{result.stderr}"
-            
+
             # Extract coverage percentage from pytest output
             coverage_percentage = 0.0
             if result.stdout:
                 # Look for coverage percentage in format like "TOTAL    100%"
-                coverage_match = re.search(r'TOTAL\s+\d+\s+\d+\s+(\d+)%', result.stdout)
+                coverage_match = re.search(r"TOTAL\s+\d+\s+\d+\s+(\d+)%", result.stdout)
                 if coverage_match:
                     coverage_percentage = float(coverage_match.group(1))
 
@@ -659,7 +664,7 @@ Corrected code:"""
             return True, 0, 0.0
 
         print(f"🧪 Evaluating test file: {Path(test_file_path).name}")
-        
+
         final_coverage = 0.0
 
         for attempt in range(1, self.max_fix_attempts + 1):
@@ -668,7 +673,9 @@ Corrected code:"""
             final_coverage = coverage
 
             if success:
-                print(f"✅ Tests passed on attempt {attempt} (Coverage: {coverage:.1f}%)")
+                print(
+                    f"✅ Tests passed on attempt {attempt} (Coverage: {coverage:.1f}%)"
+                )
                 return True, attempt, final_coverage
 
             print(f"❌ Tests failed on attempt {attempt}")
@@ -743,8 +750,8 @@ Corrected code:"""
             code_coverage = 0.0
 
             if self.enable_evaluation:
-                evaluation_success, fix_attempts_used, code_coverage = self.evaluate_and_fix_tests(
-                    filepath, problem
+                evaluation_success, fix_attempts_used, code_coverage = (
+                    self.evaluate_and_fix_tests(filepath, problem)
                 )
                 if evaluation_success:
                     print("🎉 Test generation and evaluation completed successfully!")
@@ -780,8 +787,8 @@ Corrected code:"""
             code_coverage = 0.0
 
             if self.enable_evaluation:
-                evaluation_success, fix_attempts_used, code_coverage = self.evaluate_and_fix_tests(
-                    filepath, problem
+                evaluation_success, fix_attempts_used, code_coverage = (
+                    self.evaluate_and_fix_tests(filepath, problem)
                 )
                 if evaluation_success:
                     print("🎉 Test generation and evaluation completed successfully!")
