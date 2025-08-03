@@ -535,14 +535,14 @@ PYTEST ERROR OUTPUT:
 {error_output}
 ```
 
-This is attempt {attempt} of {self.max_fix_attempts}. 
+This is attempt {attempt} of {self.max_fix_attempts}.
 
 Requirements:
 - Return ONLY executable Python code that can be run directly
 - Fix all syntax errors, import errors, and test failures
 - Use the provided function implementation to understand expected behavior
 - Ensure tests properly validate the function's actual behavior
-- Maintain comprehensive test coverage 
+- Maintain comprehensive test coverage
 - DO NOT include explanations, markdown, or code blocks
 - DO NOT wrap code in ```python``` blocks
 - DO NOT include the function implementation in your response (it's already in the file)
