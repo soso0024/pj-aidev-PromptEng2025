@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 HumanEval Test Case Generator using Claude API
 
