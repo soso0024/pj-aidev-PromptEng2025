@@ -444,10 +444,19 @@ project/
    generated_tests/             # Generated test files
       test_humaneval_*.py      # Test cases (various naming patterns)
       test_humaneval_*.stats.json  # Usage statistics
+   visualizations/              # Generated visualization graphs (created by visualize_results.py)
+      1_success_rate.png       # Success rate comparison
+      2_code_coverage.png      # Coverage analysis
+      3_cost_analysis.png      # Cost comparison
+      4_fix_attempts.png       # Fix attempts analysis
+      5_success_by_problem.png # Problem difficulty heatmap
+      6_cost_vs_quality.png    # Cost vs quality scatter plot
+      7_input_tokens.png       # Input token usage comparison
    .env                         # API key configuration
    .gitignore                   # Git ignore rules
    requirements.txt             # Python dependencies
-   test_case_generator.py       # Main script
+   test_case_generator.py       # Main test generation script
+   visualize_results.py         # Results analysis and visualization tool
    README.md                    # This file
 ```
 
@@ -562,6 +571,168 @@ Test the same problem with different options to compare:
 - Edge case detection
 - Code quality and readability
 - Execution time and performance
+
+## Results Visualization
+
+The repository includes a powerful visualization tool (`visualize_results.py`) that analyzes all generated test results and creates comprehensive graphs comparing different configuration options.
+
+### Overview
+
+The visualization tool automatically scans the `generated_tests/` directory, parses all `.stats.json` files, and generates 7 different visualization graphs to help you understand:
+
+- **Performance comparison** between different configurations (basic, AST, docstring, AST+docstring)
+- **Cost-effectiveness analysis** of different prompt strategies
+- **Quality metrics** including success rates and code coverage
+- **Problem difficulty patterns** across different HumanEval problems
+
+### Usage
+
+#### Install Additional Dependencies
+
+The visualization tool requires additional Python libraries:
+
+```bash
+pip install -r requirements.txt  # Includes: pandas, matplotlib, seaborn, numpy
+```
+
+#### Run Visualization Analysis
+
+```bash
+python visualize_results.py
+```
+
+#### Output
+
+The tool creates:
+- **7 PNG graphs** in the `visualizations/` directory
+- **Console statistics** with detailed numerical analysis
+- **Configuration comparison** showing which approach works best
+
+### Generated Visualizations
+
+The tool creates 7 comprehensive graphs:
+
+#### 1. Success Rate by Configuration (`1_success_rate.png`)
+- Bar chart showing test success percentage for each configuration
+- Displays sample size (n=X) for statistical significance
+- Ordered: basic → ast → docstring → ast+docstring
+
+#### 2. Code Coverage by Configuration (`2_code_coverage.png`)
+- Box plot showing coverage distribution + average coverage bar chart
+- Helps identify which configurations achieve better test quality
+- Shows both variability and mean performance
+
+#### 3. Cost Analysis by Configuration (`3_cost_analysis.png`)
+- Box plot and bar chart of total costs in USD
+- Compares the financial efficiency of different prompt strategies
+- Includes error bars showing cost variability
+
+#### 4. Fix Attempts by Configuration (`4_fix_attempts.png`)
+- Shows how many fix attempts each configuration typically requires
+- Lower numbers indicate more reliable initial test generation
+- Helps identify which approaches need less iteration
+
+#### 5. Success Rate by Problem ID (`5_success_by_problem.png`)
+- Heatmap showing success rates across different HumanEval problems
+- Identifies which problems are more challenging
+- Shows how different configurations perform on specific problems
+- Green = high success rate, Red = low success rate
+
+#### 6. Cost vs Quality Scatter Plot (`6_cost_vs_quality.png`)
+- Scatter plot with cost (USD) on x-axis, coverage (%) on y-axis
+- Different colors for each configuration type
+- Includes trend line to show overall cost-quality relationship
+- Helps identify the sweet spot for cost-effectiveness
+
+#### 7. Input Token Usage by Configuration (`7_input_tokens.png`)
+- Box plot and bar chart showing input token consumption
+- **Key metric** for understanding prompt cost differences
+- Shows exactly how much more expensive docstring/AST options are
+- Essential for budget planning and cost optimization
+
+### Example Console Output
+
+```bash
+Loading data from generated_tests...
+Found 12 stats files
+Successfully loaded 12 records
+
+================================================================================
+SUMMARY STATISTICS
+================================================================================
+                    success       total_input_tokens  total_cost_usd code_coverage_percent fix_attempts_used
+config_type                count mean mean    std     mean    std    mean    std           mean    std
+ast                        3     1.0  978.0   0.0     0.011   0.0    100.0   0.0           1.0     0.0
+basic                      3     0.67 542.3   98.1    0.032   0.012  66.7    57.7          2.33    0.58
+docstring                  3     1.0  1456.7  245.2   0.031   0.008  100.0   0.0           2.0     1.0
+docstring_ast              3     1.0  3371.0  0.0     0.028   0.0    100.0   0.0           2.0     0.0
+
+================================================================================
+CONFIGURATION TYPE ANALYSIS
+================================================================================
+
+AST:
+  Samples: 3
+  Success Rate: 100.0%
+  Avg Input Tokens: 978 ± 0
+  Avg Cost: $0.0110 ± $0.0000
+  Avg Coverage: 100.0% ± 0.0%
+  Avg Fix Attempts: 1.00 ± 0.00
+
+BASIC:
+  Samples: 3
+  Success Rate: 66.7%
+  Avg Input Tokens: 542 ± 98
+  Avg Cost: $0.0324 ± $0.0123
+  Avg Coverage: 66.7% ± 57.7%
+  Avg Fix Attempts: 2.33 ± 0.58
+
+...
+
+Analysis complete! Check the 'visualizations/' directory for graphs.
+```
+
+### Data Analysis Features
+
+The visualization tool provides:
+
+#### Smart Data Parsing
+- Automatically detects configuration type from filenames
+- Handles both old and new stats file formats
+- Processes success/failure status from filename suffixes
+- Groups data by problem ID and configuration type
+
+#### Statistical Analysis
+- Calculates means, standard deviations, and sample sizes
+- Provides confidence intervals through error bars
+- Shows distribution patterns with box plots
+- Identifies trends and correlations
+
+#### Comparative Insights
+- **Cost Efficiency**: Compare input tokens across configurations
+- **Quality Assessment**: Analyze success rates and coverage percentages  
+- **Reliability Metrics**: Examine fix attempt requirements
+- **Problem Difficulty**: Identify challenging HumanEval problems
+
+### Interpretation Guide
+
+#### Configuration Comparison
+- **Basic**: Lowest cost, variable success rate
+- **AST**: Moderate cost, good structural understanding
+- **Docstring**: Higher cost, benefits from examples and context
+- **AST+Docstring**: Highest cost, maximum context and quality
+
+#### Key Metrics to Watch
+- **Success Rate**: Percentage of test generations that ultimately pass
+- **Input Tokens**: Direct cost driver for API usage
+- **Code Coverage**: Quality indicator of generated tests
+- **Fix Attempts**: Reliability indicator (fewer is better)
+
+#### Optimization Strategies
+1. **Budget-Conscious**: Use basic configuration for simple problems
+2. **Quality-Focused**: Use AST+docstring for complex problems
+3. **Balanced Approach**: Start with AST, add docstring for difficult problems
+4. **Problem-Specific**: Use heatmap to identify which problems need more context
 
 ## Requirements
 
