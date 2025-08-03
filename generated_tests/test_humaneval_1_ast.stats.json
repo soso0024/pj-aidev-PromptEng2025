@@ -1,8 +1,0 @@
-{
-  "total_input_tokens": 1334,
-  "total_output_tokens": 545,
-  "total_tokens": 1879,
-  "total_cost_usd": 0.012177,
-  "task_id": "HumanEval/1",
-  "generated_file": "generated_tests/test_humaneval_1_ast.py"
-}
