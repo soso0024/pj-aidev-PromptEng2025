@@ -304,6 +304,7 @@ Start your response with "import pytest" and include only executable Python test
         problem: Dict[str, Any],
         evaluation_success: bool,
         fix_attempts_used: int,
+        code_coverage: float = 0.0,
     ) -> str:
         """Update the stats file with final statistics after evaluation process.
         
@@ -326,6 +327,7 @@ Start your response with "import pytest" and include only executable Python test
                 "evaluation_success": evaluation_success,
                 "fix_attempts_used": fix_attempts_used,
                 "max_fix_attempts": self.max_fix_attempts,
+                "code_coverage_percent": code_coverage,
             }
         )
 
@@ -519,8 +521,10 @@ Start your response with "import pytest" and include only executable Python test
 
         return str(filepath)
 
-    def run_pytest(self, test_file_path: str) -> Tuple[bool, str]:
-        """Run pytest on the test file and return (success, error_output)."""
+    def run_pytest(self, test_file_path: str) -> Tuple[bool, str, float]:
+        """Run pytest on the test file and return (success, error_output, coverage_percentage)."""
+        import re
+        
         # Use absolute path and run from project root
         abs_path = Path(test_file_path).resolve()
         cmd = ["pytest", str(abs_path), "--cov", "-v"]
@@ -540,13 +544,21 @@ Start your response with "import pytest" and include only executable Python test
 
             # Combine stdout and stderr for complete error information
             output = f"STDOUT:\n{result.stdout}\n\nSTDERR:\n{result.stderr}"
+            
+            # Extract coverage percentage from pytest output
+            coverage_percentage = 0.0
+            if result.stdout:
+                # Look for coverage percentage in format like "TOTAL    100%"
+                coverage_match = re.search(r'TOTAL\s+\d+\s+\d+\s+(\d+)%', result.stdout)
+                if coverage_match:
+                    coverage_percentage = float(coverage_match.group(1))
 
-            return success, output
+            return success, output, coverage_percentage
 
         except subprocess.TimeoutExpired:
-            return False, "Error: pytest execution timed out after 60 seconds"
+            return False, "Error: pytest execution timed out after 60 seconds", 0.0
         except Exception as e:
-            return False, f"Error running pytest: {str(e)}"
+            return False, f"Error running pytest: {str(e)}", 0.0
 
     def generate_fix_prompt(
         self,
@@ -637,24 +649,27 @@ Corrected code:"""
 
     def evaluate_and_fix_tests(
         self, test_file_path: str, problem: Dict[str, Any]
-    ) -> Tuple[bool, int]:
+    ) -> Tuple[bool, int, float]:
         """Evaluate test file with pytest and fix errors iteratively.
 
         Returns:
-            Tuple[bool, int]: (success, attempts_used)
+            Tuple[bool, int, float]: (success, attempts_used, final_coverage)
         """
         if not self.enable_evaluation:
-            return True, 0
+            return True, 0, 0.0
 
         print(f"🧪 Evaluating test file: {Path(test_file_path).name}")
+        
+        final_coverage = 0.0
 
         for attempt in range(1, self.max_fix_attempts + 1):
             # Run pytest
-            success, error_output = self.run_pytest(test_file_path)
+            success, error_output, coverage = self.run_pytest(test_file_path)
+            final_coverage = coverage
 
             if success:
-                print(f"✅ Tests passed on attempt {attempt}")
-                return True, attempt
+                print(f"✅ Tests passed on attempt {attempt} (Coverage: {coverage:.1f}%)")
+                return True, attempt, final_coverage
 
             print(f"❌ Tests failed on attempt {attempt}")
 
@@ -708,7 +723,7 @@ Corrected code:"""
                 print("Final error output:")
                 print(error_output)
 
-        return False, self.max_fix_attempts
+        return False, self.max_fix_attempts, final_coverage
 
     def generate_for_random_problem(self, output_dir: str = "generated_tests") -> str:
         """Generate test cases for a randomly selected problem."""
@@ -725,9 +740,10 @@ Corrected code:"""
             # Run evaluation and fix cycle if enabled
             evaluation_success = True
             fix_attempts_used = 0
+            code_coverage = 0.0
 
             if self.enable_evaluation:
-                evaluation_success, fix_attempts_used = self.evaluate_and_fix_tests(
+                evaluation_success, fix_attempts_used, code_coverage = self.evaluate_and_fix_tests(
                     filepath, problem
                 )
                 if evaluation_success:
@@ -737,7 +753,7 @@ Corrected code:"""
 
             # Update final stats after complete process and get final filepath
             final_filepath = self.update_final_stats(
-                filepath, problem, evaluation_success, fix_attempts_used
+                filepath, problem, evaluation_success, fix_attempts_used, code_coverage
             )
 
             return final_filepath
@@ -761,9 +777,10 @@ Corrected code:"""
             # Run evaluation and fix cycle if enabled
             evaluation_success = True
             fix_attempts_used = 0
+            code_coverage = 0.0
 
             if self.enable_evaluation:
-                evaluation_success, fix_attempts_used = self.evaluate_and_fix_tests(
+                evaluation_success, fix_attempts_used, code_coverage = self.evaluate_and_fix_tests(
                     filepath, problem
                 )
                 if evaluation_success:
@@ -773,7 +790,7 @@ Corrected code:"""
 
             # Update final stats after complete process and get final filepath
             final_filepath = self.update_final_stats(
-                filepath, problem, evaluation_success, fix_attempts_used
+                filepath, problem, evaluation_success, fix_attempts_used, code_coverage
             )
 
             return final_filepath
