@@ -15,6 +15,8 @@ A Python tool that automatically generates comprehensive pytest test cases for H
 - **Transparent debugging** with detailed error analysis and fix tracking
 - **Complete cost tracking** including all evaluation and fix attempts
 - **Comprehensive statistics** saved alongside test files
+- **Automatic file naming** with success/failure status based on test results
+- **Code coverage tracking** with percentage calculation in statistics
 - **Clean Python output** without markdown or explanations
 
 ## Installation
@@ -188,7 +190,8 @@ AssertionError: assert [1, 2] == [1]
 ================================================================================
 
 📝 Updated test file with fixes
-✅ Tests passed on attempt 2
+✅ Tests passed on attempt 2 (Coverage: 85.7%)
+📝 Renamed test_humaneval_0.py → test_humaneval_0_success.py
 🎉 Test generation and evaluation completed successfully!
 ```
 
@@ -211,25 +214,29 @@ For each test generation, the tool creates:
 
 ### Filename Conventions
 
-The tool automatically adjusts filenames based on options used:
+The tool automatically adjusts filenames based on options used and evaluation results:
 
-- Default: `test_humaneval_0.py`
-- With docstring: `test_humaneval_0_docstring.py`
-- With AST: `test_humaneval_0_ast.py`
-- With both: `test_humaneval_0_docstring_ast.py`
+- Default: `test_humaneval_0.py` → `test_humaneval_0_success.py` (if tests pass)
+- With docstring: `test_humaneval_0_docstring.py` → `test_humaneval_0_docstring_false.py` (if tests fail)
+- With AST: `test_humaneval_0_ast.py` → `test_humaneval_0_ast_success.py` (if tests pass)
+- With both: `test_humaneval_0_docstring_ast.py` → `test_humaneval_0_docstring_ast_success.py` (if tests pass)
+
+**Automatic Status Suffixes:**
+- `_success`: Tests passed during evaluation
+- `_false`: Tests failed during evaluation (even after fix attempts)
 
 ### Example Output Structure
 
 ```
 generated_tests/
-   test_humaneval_0.py                    # Basic generation
-   test_humaneval_0.stats.json            # Usage statistics
-   test_humaneval_1_docstring.py          # With docstring
-   test_humaneval_1_docstring.stats.json  # Usage statistics
-   test_humaneval_2_ast.py                # With AST
-   test_humaneval_2_ast.stats.json        # Usage statistics
-   test_humaneval_3_docstring_ast.py      # With both options
-   test_humaneval_3_docstring_ast.stats.json # Usage statistics
+   test_humaneval_0_success.py                    # Basic generation (tests passed)
+   test_humaneval_0_success.stats.json            # Usage statistics with coverage
+   test_humaneval_1_docstring_false.py            # With docstring (tests failed)
+   test_humaneval_1_docstring_false.stats.json    # Usage statistics with coverage
+   test_humaneval_2_ast_success.py                # With AST (tests passed)
+   test_humaneval_2_ast_success.stats.json        # Usage statistics with coverage
+   test_humaneval_3_docstring_ast_success.py      # With both options (tests passed)
+   test_humaneval_3_docstring_ast_success.stats.json # Usage statistics with coverage
 ```
 
 ### Console Output Example
@@ -455,19 +462,22 @@ Each `.stats.json` file contains:
   "total_tokens": 5914,
   "total_cost_usd": 0.042198,
   "task_id": "HumanEval/4",
-  "generated_file": "generated_tests/test_humaneval_4.py",
+  "generated_file": "generated_tests/test_humaneval_4_success.py",
   "evaluation_enabled": true,
   "evaluation_success": true,
   "fix_attempts_used": 3,
-  "max_fix_attempts": 3
+  "max_fix_attempts": 3,
+  "code_coverage_percent": 85.7
 }
 ```
 
-**New fields for evaluation tracking:**
+**Fields for evaluation and quality tracking:**
 - `evaluation_enabled`: Whether automatic evaluation was used
 - `evaluation_success`: Whether tests finally passed after fixing
 - `fix_attempts_used`: Number of fix attempts actually used
 - `max_fix_attempts`: Maximum attempts that were configured
+- `code_coverage_percent`: Final code coverage percentage from pytest --cov
+- `generated_file`: Final filename (includes success/failure suffix)
 - `total_cost_usd`: Now includes costs from all fix attempts, not just initial generation
 
 ## Troubleshooting
