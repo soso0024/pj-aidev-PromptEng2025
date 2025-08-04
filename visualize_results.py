@@ -104,12 +104,14 @@ class TestResultsAnalyzer:
 
         # Convert to DataFrame for easier analysis
         self.df = pd.DataFrame(self.data)
-        
+
         # Set categorical ordering for config_type and rename labels
         if not self.df.empty:
             # Rename docstring_ast to ast+docstring for better readability
-            self.df["config_type_display"] = self.df["config_type"].replace("docstring_ast", "ast+docstring")
-            
+            self.df["config_type_display"] = self.df["config_type"].replace(
+                "docstring_ast", "ast+docstring"
+            )
+
             # Create display order matching the internal order
             display_order = ["basic", "ast", "docstring", "ast+docstring"]
             self.df["config_type_display"] = pd.Categorical(
@@ -196,7 +198,9 @@ class TestResultsAnalyzer:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
 
         # Box plot
-        sns.boxplot(data=self.df, x="config_type_display", y="code_coverage_percent", ax=ax1)
+        sns.boxplot(
+            data=self.df, x="config_type_display", y="code_coverage_percent", ax=ax1
+        )
         ax1.set_title("Code Coverage Distribution by Configuration", fontweight="bold")
         ax1.set_xlabel("Configuration Type")
         ax1.set_ylabel("Code Coverage (%)")
@@ -204,7 +208,9 @@ class TestResultsAnalyzer:
 
         # Bar plot of mean coverage
         coverage_stats = (
-            self.df.groupby("config_type_display", observed=False)["code_coverage_percent"]
+            self.df.groupby("config_type_display", observed=False)[
+                "code_coverage_percent"
+            ]
             .agg(["mean", "std", "count"])
             .reset_index()
         )
@@ -284,7 +290,9 @@ class TestResultsAnalyzer:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
 
         # Box plot
-        sns.boxplot(data=self.df, x="config_type_display", y="fix_attempts_used", ax=ax1)
+        sns.boxplot(
+            data=self.df, x="config_type_display", y="fix_attempts_used", ax=ax1
+        )
         ax1.set_title("Fix Attempts Distribution by Configuration", fontweight="bold")
         ax1.set_xlabel("Configuration Type")
         ax1.set_ylabel("Fix Attempts Used")
@@ -399,7 +407,9 @@ class TestResultsAnalyzer:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
 
         # Box plot for distribution
-        sns.boxplot(data=self.df, x="config_type_display", y="total_input_tokens", ax=ax1)
+        sns.boxplot(
+            data=self.df, x="config_type_display", y="total_input_tokens", ax=ax1
+        )
         ax1.set_title("Input Token Distribution by Configuration", fontweight="bold")
         ax1.set_xlabel("Configuration Type")
         ax1.set_ylabel("Input Tokens")
