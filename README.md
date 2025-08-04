@@ -63,6 +63,39 @@ Generate test cases for a random problem:
 python test_case_generator.py
 ```
 
+### Batch Generation
+
+For generating test cases for multiple HumanEval problems automatically, use the batch generator:
+
+```bash
+# Generate tests for HumanEval/0 through HumanEval/10
+python batch_test_generator.py --start 0 --end 10
+
+# Generate with docstrings and AST for range 0-5
+python batch_test_generator.py --start 0 --end 5 --include-docstring --include-ast
+
+# Generate specific task IDs
+python batch_test_generator.py --task-ids "HumanEval/0,HumanEval/5,HumanEval/10"
+
+# Fast generation without evaluation for range 0-20
+python batch_test_generator.py --start 0 --end 20 --disable-evaluation
+```
+
+#### Batch Generator Options
+
+All options from the single generator are supported:
+
+| Option                | Description                                          |
+| --------------------- | ---------------------------------------------------- |
+| `--start N`           | Start task ID number (default: 0)                   |
+| `--end N`             | End task ID number (default: 50)                    |
+| `--task-ids "X,Y,Z"`  | Comma-separated specific task IDs                    |
+| `--include-docstring` | Include function docstring in prompt                 |
+| `--include-ast`       | Include AST of canonical solution in prompt          |
+| `--disable-evaluation`| Skip automatic test evaluation                       |
+| `--quiet-evaluation`  | Less verbose evaluation output                       |
+| `--max-fix-attempts N`| Maximum fix attempts per task (default: 3)          |
+
 ### Command Line Options
 
 | Option                 | Description                                                   | Default                      |
