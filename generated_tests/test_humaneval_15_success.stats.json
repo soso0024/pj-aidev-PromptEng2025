@@ -7,7 +7,7 @@
   "generated_file": "generated_tests/test_humaneval_15_success.py",
   "evaluation_enabled": true,
   "evaluation_success": true,
-  "fix_attempts_used": 1,
+  "fix_attempts_used": 0,
   "max_fix_attempts": 3,
   "code_coverage_percent": 100.0
 }
