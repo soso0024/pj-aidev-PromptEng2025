@@ -12,7 +12,6 @@ import argparse
 import re
 import ast
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import Dict, List, Any, Tuple
 import anthropic
@@ -197,20 +196,30 @@ Start your response with "import pytest" and include only executable Python test
         lines = cleaned.split("\n")
         code_lines = []
         code_started = False
+        seen_imports = set()  # Track imports to avoid duplicates
 
         for line in lines:
+            stripped_line = line.strip()
+            
             # Start collecting lines when we see imports, decorators, or function definitions
             if not code_started and (
-                line.strip().startswith("import ")
-                or line.strip().startswith("from ")
-                or line.strip().startswith("def ")
-                or line.strip().startswith("@pytest")
-                or line.strip().startswith("@")
+                stripped_line.startswith("import ")
+                or stripped_line.startswith("from ")
+                or stripped_line.startswith("def ")
+                or stripped_line.startswith("@pytest")
+                or stripped_line.startswith("@")
             ):
                 code_started = True
 
             if code_started:
-                code_lines.append(line)
+                # Check for duplicate imports
+                if (stripped_line.startswith("import ") or stripped_line.startswith("from ")):
+                    if stripped_line not in seen_imports:
+                        seen_imports.add(stripped_line)
+                        code_lines.append(line)
+                    # Skip duplicate imports
+                else:
+                    code_lines.append(line)
 
         # Try to validate the code by checking for syntax errors
         try:
@@ -527,7 +536,6 @@ Start your response with "import pytest" and include only executable Python test
 
     def run_pytest(self, test_file_path: str) -> Tuple[bool, str, float]:
         """Run pytest on the test file and return (success, error_output, coverage_percentage)."""
-        import re
 
         # Use absolute path and run from project root
         abs_path = Path(test_file_path).resolve()
@@ -675,7 +683,7 @@ Corrected code:"""
                 print(
                     f"✅ Tests passed on attempt {attempt} (Coverage: {coverage:.1f}%)"
                 )
-                return True, attempt, final_coverage
+                return True, attempt - 1, final_coverage
 
             print(f"❌ Tests failed on attempt {attempt}")
 
@@ -731,40 +739,46 @@ Corrected code:"""
 
         return False, self.max_fix_attempts, final_coverage
 
+    def _generate_and_evaluate_test_cases(
+        self, problem: Dict[str, Any], output_dir: str = "generated_tests"
+    ) -> str:
+        """Generate test cases for a problem, evaluate them, and return final filepath."""
+        print(f"Selected problem: {problem['task_id']}")
+
+        test_cases = self.generate_test_cases(problem)
+        if not test_cases:
+            raise RuntimeError("Failed to generate test cases")
+
+        filepath = self.save_test_cases(problem, test_cases, output_dir)
+
+        # Run evaluation and fix cycle if enabled
+        evaluation_success = True
+        fix_attempts_used = 0
+        code_coverage = 0.0
+
+        if self.enable_evaluation:
+            evaluation_success, fix_attempts_used, code_coverage = (
+                self.evaluate_and_fix_tests(filepath, problem)
+            )
+            if evaluation_success:
+                print("🎉 Test generation and evaluation completed successfully!")
+            else:
+                print("⚠️  Test generation completed but evaluation failed")
+
+        # Update final stats after complete process and get final filepath
+        final_filepath = self.update_final_stats(
+            filepath, problem, evaluation_success, fix_attempts_used, code_coverage
+        )
+
+        return final_filepath
+
     def generate_for_random_problem(self, output_dir: str = "generated_tests") -> str:
         """Generate test cases for a randomly selected problem."""
         if not self.problems:
             raise ValueError("No problems loaded. Call load_dataset() first.")
 
         problem = self.select_random_problem()
-        print(f"Selected problem: {problem['task_id']}")
-
-        test_cases = self.generate_test_cases(problem)
-        if test_cases:
-            filepath = self.save_test_cases(problem, test_cases, output_dir)
-
-            # Run evaluation and fix cycle if enabled
-            evaluation_success = True
-            fix_attempts_used = 0
-            code_coverage = 0.0
-
-            if self.enable_evaluation:
-                evaluation_success, fix_attempts_used, code_coverage = (
-                    self.evaluate_and_fix_tests(filepath, problem)
-                )
-                if evaluation_success:
-                    print("🎉 Test generation and evaluation completed successfully!")
-                else:
-                    print("⚠️  Test generation completed but evaluation failed")
-
-            # Update final stats after complete process and get final filepath
-            final_filepath = self.update_final_stats(
-                filepath, problem, evaluation_success, fix_attempts_used, code_coverage
-            )
-
-            return final_filepath
-        else:
-            raise RuntimeError("Failed to generate test cases")
+        return self._generate_and_evaluate_test_cases(problem, output_dir)
 
     def generate_for_specific_problem(
         self, task_id: str, output_dir: str = "generated_tests"
@@ -774,34 +788,7 @@ Corrected code:"""
         if not problem:
             raise ValueError(f"Problem {task_id} not found in dataset")
 
-        print(f"Selected problem: {problem['task_id']}")
-
-        test_cases = self.generate_test_cases(problem)
-        if test_cases:
-            filepath = self.save_test_cases(problem, test_cases, output_dir)
-
-            # Run evaluation and fix cycle if enabled
-            evaluation_success = True
-            fix_attempts_used = 0
-            code_coverage = 0.0
-
-            if self.enable_evaluation:
-                evaluation_success, fix_attempts_used, code_coverage = (
-                    self.evaluate_and_fix_tests(filepath, problem)
-                )
-                if evaluation_success:
-                    print("🎉 Test generation and evaluation completed successfully!")
-                else:
-                    print("⚠️  Test generation completed but evaluation failed")
-
-            # Update final stats after complete process and get final filepath
-            final_filepath = self.update_final_stats(
-                filepath, problem, evaluation_success, fix_attempts_used, code_coverage
-            )
-
-            return final_filepath
-        else:
-            raise RuntimeError("Failed to generate test cases")
+        return self._generate_and_evaluate_test_cases(problem, output_dir)
 
 
 def main():
