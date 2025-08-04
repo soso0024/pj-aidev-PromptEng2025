@@ -666,7 +666,7 @@ The tool creates 7 comprehensive graphs:
 - Shows exactly how much more expensive docstring/AST options are
 - Essential for budget planning and cost optimization
 
-### How to see Hakohigezu (箱ヒゲ図)
+### How to see the Hakohigezu (箱ヒゲ図)
 
 https://cacco.co.jp/datascience/blog/statistics/203/
 
