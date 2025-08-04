@@ -65,18 +65,18 @@ python test_case_generator.py
 
 ### Command Line Options
 
-| Option                | Description                                                   | Default                   |
-| --------------------- | ------------------------------------------------------------- | ------------------------- |
-| `--dataset`           | Path to HumanEval dataset file                                | `dataset/HumanEval.jsonl` |
-| `--output-dir`        | Output directory for test files                               | `generated_tests`         |
-| `--task-id`           | Specific task ID to generate tests for                        | Random selection          |
-| `--api-key`           | Claude API key                                                | From .env or environment  |
-| `--include-docstring` | Include function docstring in prompt                          | `False` (signature only)  |
-| `--include-ast`       | Include AST of canonical solution in prompt                   | `False`                   |
-| `--show-prompt`       | Display prompt before sending to LLM and ask for confirmation | `False`                   |
-| `--disable-evaluation` | Disable automatic test evaluation and error fixing           | `False` (evaluation enabled) |
-| `--max-fix-attempts`  | Maximum number of attempts to fix test errors                 | `3`                       |
-| `--quiet-evaluation`  | Disable verbose output during error fixing process            | `False` (verbose enabled) |
+| Option                 | Description                                                   | Default                      |
+| ---------------------- | ------------------------------------------------------------- | ---------------------------- |
+| `--dataset`            | Path to HumanEval dataset file                                | `dataset/HumanEval.jsonl`    |
+| `--output-dir`         | Output directory for test files                               | `generated_tests`            |
+| `--task-id`            | Specific task ID to generate tests for                        | Random selection             |
+| `--api-key`            | Claude API key                                                | From .env or environment     |
+| `--include-docstring`  | Include function docstring in prompt                          | `False` (signature only)     |
+| `--include-ast`        | Include AST of canonical solution in prompt                   | `False`                      |
+| `--show-prompt`        | Display prompt before sending to LLM and ask for confirmation | `False`                      |
+| `--disable-evaluation` | Disable automatic test evaluation and error fixing            | `False` (evaluation enabled) |
+| `--max-fix-attempts`   | Maximum number of attempts to fix test errors                 | `3`                          |
+| `--quiet-evaluation`   | Disable verbose output during error fixing process            | `False` (verbose enabled)    |
 
 ### Examples
 
@@ -133,6 +133,7 @@ python test_case_generator.py --task-id "HumanEval/0"
 ```
 
 This will:
+
 1. Generate initial test cases
 2. Run `pytest test_humaneval_0.py --cov -v` automatically
 3. If tests fail, analyze errors and send them to LLM for fixing
@@ -145,7 +146,7 @@ This will:
 # Disable evaluation (original behavior)
 python test_case_generator.py --task-id "HumanEval/0" --disable-evaluation
 
-# Set maximum fix attempts 
+# Set maximum fix attempts
 python test_case_generator.py --task-id "HumanEval/0" --max-fix-attempts 5
 
 # Quiet mode (less verbose output during fixing)
@@ -222,6 +223,7 @@ The tool automatically adjusts filenames based on options used and evaluation re
 - With both: `test_humaneval_0_docstring_ast.py` → `test_humaneval_0_docstring_ast_success.py` (if tests pass)
 
 **Automatic Status Suffixes:**
+
 - `_success`: Tests passed during evaluation
 - `_false`: Tests failed during evaluation (even after fix attempts)
 
@@ -284,30 +286,30 @@ cd generated_tests
 
 ### Common pytest Options
 
-| Option | Description |
-|--------|-------------|
-| `-v, --verbose` | Verbose output showing individual test names and results |
-| `-s` | Don't capture output (show print statements) |
-| `-x` | Stop on first failure |
-| `--tb=short` | Shorter traceback format |
-| `--tb=line` | One line per failure |
-| `--tb=no` | No traceback |
-| `-k EXPRESSION` | Run tests matching keyword expression |
-| `--maxfail=N` | Stop after N failures |
-| `-q, --quiet` | Quiet mode (less verbose) |
-| `--collect-only` | Show which tests would be run without executing |
-| `--lf, --last-failed` | Run only tests that failed in last run |
-| `--ff, --failed-first` | Run failed tests first, then rest |
+| Option                 | Description                                              |
+| ---------------------- | -------------------------------------------------------- |
+| `-v, --verbose`        | Verbose output showing individual test names and results |
+| `-s`                   | Don't capture output (show print statements)             |
+| `-x`                   | Stop on first failure                                    |
+| `--tb=short`           | Shorter traceback format                                 |
+| `--tb=line`            | One line per failure                                     |
+| `--tb=no`              | No traceback                                             |
+| `-k EXPRESSION`        | Run tests matching keyword expression                    |
+| `--maxfail=N`          | Stop after N failures                                    |
+| `-q, --quiet`          | Quiet mode (less verbose)                                |
+| `--collect-only`       | Show which tests would be run without executing          |
+| `--lf, --last-failed`  | Run only tests that failed in last run                   |
+| `--ff, --failed-first` | Run failed tests first, then rest                        |
 
 ### Coverage Options
 
-| Option | Description |
-|--------|-------------|
-| `--cov` | Generate coverage report |
-| `--cov-report=term` | Terminal coverage report (default) |
-| `--cov-report=html` | HTML coverage report |
-| `--cov-report=xml` | XML coverage report |
-| `--cov-fail-under=N` | Fail if coverage is under N% |
+| Option               | Description                        |
+| -------------------- | ---------------------------------- |
+| `--cov`              | Generate coverage report           |
+| `--cov-report=term`  | Terminal coverage report (default) |
+| `--cov-report=html`  | HTML coverage report               |
+| `--cov-report=xml`   | XML coverage report                |
+| `--cov-fail-under=N` | Fail if coverage is under N%       |
 
 ### Example Usage
 
@@ -418,20 +420,23 @@ Current Claude 3.5 Sonnet pricing:
 Typical usage per problem:
 
 **Initial Generation:**
+
 - **Signature only**: ~800-1,200 input tokens
-- **With docstring**: ~1,500-2,500 input tokens  
+- **With docstring**: ~1,500-2,500 input tokens
 - **With AST**: ~1,000-1,800 input tokens
 - **With both**: ~2,000-3,500 input tokens
 - **Generated output**: ~500-1,000 tokens
 
 **With Evaluation and Error Fixing:**
+
 - **Additional input per fix**: ~1,500-4,000 tokens (includes error output + function implementation)
 - **Additional output per fix**: ~500-1,500 tokens
 - **Total fix attempts**: 0-3 (average: 1-2)
 
 **Total Cost Examples:**
+
 - **No evaluation**: ~$0.01-0.05 per problem
-- **With evaluation (no fixes needed)**: ~$0.01-0.05 per problem  
+- **With evaluation (no fixes needed)**: ~$0.01-0.05 per problem
 - **With evaluation (1-2 fix attempts)**: ~$0.02-0.08 per problem
 - **With evaluation (3 fix attempts)**: ~$0.03-0.12 per problem
 
@@ -481,6 +486,7 @@ Each `.stats.json` file contains:
 ```
 
 **Fields for evaluation and quality tracking:**
+
 - `evaluation_enabled`: Whether automatic evaluation was used
 - `evaluation_success`: Whether tests finally passed after fixing
 - `fix_attempts_used`: Number of fix attempts actually used
@@ -519,11 +525,13 @@ Each `.stats.json` file contains:
    - Either run in an interactive terminal or omit `--show-prompt`
 
 6. **Syntax errors in generated pytest code**
+
    - The tool now includes automatic error fixing with evaluation
    - Improved prompt instructions for proper quote escaping
    - If issues persist, try `--disable-evaluation` or `--max-fix-attempts 1`
 
 7. **Evaluation fails or times out**
+
    - Check that pytest is installed: `pip install pytest pytest-cov`
    - Verify the generated test file has no import errors
    - Use `--quiet-evaluation` to reduce output noise
@@ -604,6 +612,7 @@ python visualize_results.py
 #### Output
 
 The tool creates:
+
 - **7 PNG graphs** in the `visualizations/` directory
 - **Console statistics** with detailed numerical analysis
 - **Configuration comparison** showing which approach works best
@@ -613,42 +622,53 @@ The tool creates:
 The tool creates 7 comprehensive graphs:
 
 #### 1. Success Rate by Configuration (`1_success_rate.png`)
+
 - Bar chart showing test success percentage for each configuration
 - Displays sample size (n=X) for statistical significance
 - Ordered: basic → ast → docstring → ast+docstring
 
 #### 2. Code Coverage by Configuration (`2_code_coverage.png`)
+
 - Box plot showing coverage distribution + average coverage bar chart
 - Helps identify which configurations achieve better test quality
 - Shows both variability and mean performance
 
 #### 3. Cost Analysis by Configuration (`3_cost_analysis.png`)
+
 - Box plot and bar chart of total costs in USD
 - Compares the financial efficiency of different prompt strategies
 - Includes error bars showing cost variability
 
 #### 4. Fix Attempts by Configuration (`4_fix_attempts.png`)
+
 - Shows how many fix attempts each configuration typically requires
 - Lower numbers indicate more reliable initial test generation
 - Helps identify which approaches need less iteration
 
 #### 5. Success Rate by Problem ID (`5_success_by_problem.png`)
+
 - Heatmap showing success rates across different HumanEval problems
 - Identifies which problems are more challenging
 - Shows how different configurations perform on specific problems
 - Green = high success rate, Red = low success rate
 
 #### 6. Cost vs Quality Scatter Plot (`6_cost_vs_quality.png`)
+
 - Scatter plot with cost (USD) on x-axis, coverage (%) on y-axis
 - Different colors for each configuration type
 - Includes trend line to show overall cost-quality relationship
 - Helps identify the sweet spot for cost-effectiveness
 
 #### 7. Input Token Usage by Configuration (`7_input_tokens.png`)
+
 - Box plot and bar chart showing input token consumption
 - **Key metric** for understanding prompt cost differences
 - Shows exactly how much more expensive docstring/AST options are
 - Essential for budget planning and cost optimization
+
+### How to see Hakohigezu (箱ヒゲ図)
+
+https://cacco.co.jp/datascience/blog/statistics/203/
 
 ### Example Console Output
 
@@ -697,38 +717,44 @@ Analysis complete! Check the 'visualizations/' directory for graphs.
 The visualization tool provides:
 
 #### Smart Data Parsing
+
 - Automatically detects configuration type from filenames
 - Handles both old and new stats file formats
 - Processes success/failure status from filename suffixes
 - Groups data by problem ID and configuration type
 
 #### Statistical Analysis
+
 - Calculates means, standard deviations, and sample sizes
 - Provides confidence intervals through error bars
 - Shows distribution patterns with box plots
 - Identifies trends and correlations
 
 #### Comparative Insights
+
 - **Cost Efficiency**: Compare input tokens across configurations
-- **Quality Assessment**: Analyze success rates and coverage percentages  
+- **Quality Assessment**: Analyze success rates and coverage percentages
 - **Reliability Metrics**: Examine fix attempt requirements
 - **Problem Difficulty**: Identify challenging HumanEval problems
 
 ### Interpretation Guide
 
 #### Configuration Comparison
+
 - **Basic**: Lowest cost, variable success rate
 - **AST**: Moderate cost, good structural understanding
 - **Docstring**: Higher cost, benefits from examples and context
 - **AST+Docstring**: Highest cost, maximum context and quality
 
 #### Key Metrics to Watch
+
 - **Success Rate**: Percentage of test generations that ultimately pass
 - **Input Tokens**: Direct cost driver for API usage
 - **Code Coverage**: Quality indicator of generated tests
 - **Fix Attempts**: Reliability indicator (fewer is better)
 
 #### Optimization Strategies
+
 1. **Budget-Conscious**: Use basic configuration for simple problems
 2. **Quality-Focused**: Use AST+docstring for complex problems
 3. **Balanced Approach**: Start with AST, add docstring for difficult problems
