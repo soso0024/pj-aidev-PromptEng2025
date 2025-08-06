@@ -22,6 +22,7 @@ class TestCaseGenerator:
     def __init__(
         self,
         api_key: str,
+        models: List[str] = None,
         include_docstring: bool = False,
         include_ast: bool = False,
         show_prompt: bool = False,
@@ -32,6 +33,26 @@ class TestCaseGenerator:
         """Initialize the test case generator with Claude API client."""
         self.client = anthropic.Anthropic(api_key=api_key)
         self.problems = []
+        
+        # Model configuration
+        self.model_mapping = {
+            "claude-3-5-sonnet-20241022": "claude-3-5-sonnet-20241022",
+            "claude-3-5-haiku-20241022": "claude-3-5-haiku-20241022", 
+            "claude-3-haiku-20240307": "claude-3-haiku-20240307"
+        }
+        
+        # Set default model if none provided
+        if models is None:
+            models = ["claude-3-5-sonnet-20241022"]
+        
+        # Validate models
+        self.models = []
+        for model in models:
+            if model in self.model_mapping:
+                self.models.append(model)
+            else:
+                raise ValueError(f"Unsupported model: {model}. Supported models: {list(self.model_mapping.keys())}")
+        
         self.include_docstring = include_docstring
         self.include_ast = include_ast
         self.show_prompt = show_prompt
@@ -42,9 +63,19 @@ class TestCaseGenerator:
         self.total_output_tokens = 0
         self.total_cost = 0.0
 
-        # Claude 3.5 Sonnet pricing (as of 2024)
+        # Claude 3.5 Sonnet pricing (as of 2024) - using as default
+        # TODO: Add pricing for different models
         self.input_cost_per_1k_tokens = 0.003  # $3 per 1M tokens
         self.output_cost_per_1k_tokens = 0.015  # $15 per 1M tokens
+
+    def get_model_folder_name(self, model: str) -> str:
+        """Convert model name to a folder-friendly string."""
+        model_folder_map = {
+            "claude-3-5-sonnet-20241022": "claude-3-5-sonnet",
+            "claude-3-5-haiku-20241022": "claude-3-5-haiku", 
+            "claude-3-haiku-20240307": "claude-3-haiku"
+        }
+        return model_folder_map.get(model, model)
 
     def load_dataset(self, file_path: str) -> None:
         """Load the HumanEval dataset from JSONL file."""
@@ -453,11 +484,11 @@ Start your response with "import pytest" and include only executable Python test
 
         print(f"{'='*80}\n")
 
-    def generate_test_cases(self, problem: Dict[str, Any]) -> str:
+    def generate_test_cases(self, problem: Dict[str, Any], model: str) -> str:
         """Generate test cases using Claude API."""
         prompt = self.generate_prompt(problem)
 
-        print(f"Generating test cases for {problem['task_id']}...")
+        print(f"Generating test cases for {problem['task_id']} using {model}...")
 
         # Show prompt and get confirmation if requested
         if self.show_prompt:
@@ -466,7 +497,7 @@ Start your response with "import pytest" and include only executable Python test
 
         try:
             response = self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model=self.model_mapping[model],
                 max_tokens=2000,
                 temperature=0.0,  # A temperature of 0.0 results in the most deterministic and consistent responses, as the model will consistently choose the most probable words and sequences.
                 messages=[{"role": "user", "content": prompt}],
@@ -491,13 +522,16 @@ Start your response with "import pytest" and include only executable Python test
             return ""
 
     def save_test_cases(
-        self, problem: Dict[str, Any], test_cases: str, output_dir: str
+        self, problem: Dict[str, Any], test_cases: str, output_dir: str, model: str
     ) -> str:
         """Save generated test cases to a file."""
-        output_path = Path(output_dir)
+        # Create model-specific output directory
+        model_folder = self.get_model_folder_name(model)
+        model_output_dir = f"{output_dir}_{model_folder}"
+        output_path = Path(model_output_dir)
         output_path.mkdir(exist_ok=True)
 
-        # Create filename from task_id
+        # Create filename from task_id (no model name in filename since folder identifies model)
         base_name = f"test_{problem['task_id'].replace('/', '_').lower()}"
         filename_parts = [base_name]
 
@@ -616,7 +650,7 @@ Requirements:
 Corrected code:"""
 
     def fix_test_cases(
-        self, test_code: str, error_output: str, attempt: int, problem: Dict[str, Any]
+        self, test_code: str, error_output: str, attempt: int, problem: Dict[str, Any], model: str
     ) -> str:
         """Use LLM to fix test case errors."""
         fix_prompt = self.generate_fix_prompt(test_code, error_output, attempt, problem)
@@ -627,10 +661,10 @@ Corrected code:"""
             return test_code
 
         try:
-            print(f"🤖 Sending fix request to LLM (attempt {attempt})...")
+            print(f"🤖 Sending fix request to LLM (attempt {attempt}) using {model}...")
 
             response = self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model=self.model_mapping[model],
                 max_tokens=3000,
                 temperature=0.0,
                 messages=[{"role": "user", "content": fix_prompt}],
@@ -662,7 +696,7 @@ Corrected code:"""
             return test_code  # Return original code if fixing fails
 
     def evaluate_and_fix_tests(
-        self, test_file_path: str, problem: Dict[str, Any]
+        self, test_file_path: str, problem: Dict[str, Any], model: str
     ) -> Tuple[bool, int, float]:
         """Evaluate test file with pytest and fix errors iteratively.
 
@@ -710,7 +744,7 @@ Corrected code:"""
 
                 # Get fixed version from LLM
                 fixed_code = self.fix_test_cases(
-                    test_code, error_output, attempt, problem
+                    test_code, error_output, attempt, problem, model
                 )
 
                 # Update the test file with fixed code
@@ -743,38 +777,49 @@ Corrected code:"""
 
     def _generate_and_evaluate_test_cases(
         self, problem: Dict[str, Any], output_dir: str = "generated_tests"
-    ) -> str:
-        """Generate test cases for a problem, evaluate them, and return final filepath."""
+    ) -> List[str]:
+        """Generate test cases for a problem using all selected models, evaluate them, and return final filepaths."""
         print(f"Selected problem: {problem['task_id']}")
+        print(f"Generating test cases using {len(self.models)} model(s): {', '.join(self.models)}")
 
-        test_cases = self.generate_test_cases(problem)
-        if not test_cases:
-            raise RuntimeError("Failed to generate test cases")
+        final_filepaths = []
 
-        filepath = self.save_test_cases(problem, test_cases, output_dir)
+        for model in self.models:
+            print(f"\n{'='*60}")
+            print(f"Processing with model: {model}")
+            print(f"{'='*60}")
 
-        # Run evaluation and fix cycle if enabled
-        evaluation_success = True
-        fix_attempts_used = 0
-        code_coverage = 0.0
+            test_cases = self.generate_test_cases(problem, model)
+            if not test_cases:
+                print(f"❌ Failed to generate test cases for model {model}")
+                continue
 
-        if self.enable_evaluation:
-            evaluation_success, fix_attempts_used, code_coverage = (
-                self.evaluate_and_fix_tests(filepath, problem)
+            filepath = self.save_test_cases(problem, test_cases, output_dir, model)
+
+            # Run evaluation and fix cycle if enabled
+            evaluation_success = True
+            fix_attempts_used = 0
+            code_coverage = 0.0
+
+            if self.enable_evaluation:
+                evaluation_success, fix_attempts_used, code_coverage = (
+                    self.evaluate_and_fix_tests(filepath, problem, model)
+                )
+                if evaluation_success:
+                    print(f"🎉 Test generation and evaluation completed successfully for {model}!")
+                else:
+                    print(f"⚠️  Test generation completed but evaluation failed for {model}")
+
+            # Update final stats after complete process and get final filepath
+            final_filepath = self.update_final_stats(
+                filepath, problem, evaluation_success, fix_attempts_used, code_coverage
             )
-            if evaluation_success:
-                print("🎉 Test generation and evaluation completed successfully!")
-            else:
-                print("⚠️  Test generation completed but evaluation failed")
+            
+            final_filepaths.append(final_filepath)
 
-        # Update final stats after complete process and get final filepath
-        final_filepath = self.update_final_stats(
-            filepath, problem, evaluation_success, fix_attempts_used, code_coverage
-        )
+        return final_filepaths
 
-        return final_filepath
-
-    def generate_for_random_problem(self, output_dir: str = "generated_tests") -> str:
+    def generate_for_random_problem(self, output_dir: str = "generated_tests") -> List[str]:
         """Generate test cases for a randomly selected problem."""
         if not self.problems:
             raise ValueError("No problems loaded. Call load_dataset() first.")
@@ -784,7 +829,7 @@ Corrected code:"""
 
     def generate_for_specific_problem(
         self, task_id: str, output_dir: str = "generated_tests"
-    ) -> str:
+    ) -> List[str]:
         """Generate test cases for a specific problem by task_id."""
         problem = next((p for p in self.problems if p["task_id"] == task_id), None)
         if not problem:
@@ -814,6 +859,13 @@ def main():
         "--task-id", help="Specific task ID to generate tests for (optional)"
     )
     parser.add_argument("--api-key", help="Claude API key (or set in .env file)")
+    parser.add_argument(
+        "--models",
+        nargs="+",
+        default=["claude-3-5-sonnet-20241022"],
+        choices=["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-haiku-20240307"],
+        help="Claude model(s) to use for test generation (can specify multiple)"
+    )
     parser.add_argument(
         "--include-docstring",
         action="store_true",
@@ -861,6 +913,7 @@ def main():
         # Initialize generator
         generator = TestCaseGenerator(
             api_key,
+            models=args.models,
             include_docstring=args.include_docstring,
             include_ast=args.include_ast,
             show_prompt=args.show_prompt,
@@ -874,25 +927,48 @@ def main():
 
         # Generate test cases
         if args.task_id:
-            output_file = generator.generate_for_specific_problem(
+            output_files = generator.generate_for_specific_problem(
                 args.task_id, args.output_dir
             )
         else:
-            output_file = generator.generate_for_random_problem(args.output_dir)
+            output_files = generator.generate_for_random_problem(args.output_dir)
 
         # Display final usage statistics
         stats = generator.get_usage_stats()
 
         print(f"\n✅ Successfully generated test cases!")
-        print(f"📁 Output file: {output_file}")
+        print(f"📁 Output folders and files ({len(output_files)}):")
+        
+        # Group files by folder
+        folders = {}
+        for output_file in output_files:
+            folder = Path(output_file).parent.name
+            filename = Path(output_file).name
+            if folder not in folders:
+                folders[folder] = []
+            folders[folder].append(filename)
+        
+        for i, (folder, files) in enumerate(folders.items(), 1):
+            print(f"  {i}. {folder}/")
+            for file in files:
+                print(f"     └── {file}")
+        
         print(f"\n📊 Token Usage & Cost:")
         print(f"  Input tokens: {stats['total_input_tokens']}")
         print(f"  Output tokens: {stats['total_output_tokens']}")
         print(f"  Total tokens: {stats['total_tokens']}")
         print(f"  Total cost: ${stats['total_cost_usd']}")
         print(f"\nTo run the tests:")
-        print(f"  cd {args.output_dir}")
-        print(f"  pytest {Path(output_file).name} -v --cov")
+        if len(folders) == 1:
+            folder_name = list(folders.keys())[0]
+            print(f"  cd {folder_name}")
+            print(f"  pytest . -v --cov")
+        else:
+            print(f"  # Run tests from specific model folder:")
+            for folder in folders.keys():
+                print(f"  cd {folder} && pytest . -v --cov")
+            print(f"  # Or run all tests from parent directory:")
+            print(f"  pytest generated_tests_*/ -v --cov")
 
         return 0
 

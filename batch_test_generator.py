@@ -18,6 +18,7 @@ class BatchTestGenerator:
     def __init__(self, 
                  start_id: int = 0, 
                  end_id: int = 50,
+                 models: List[str] = None,
                  include_docstring: bool = False,
                  include_ast: bool = False,
                  disable_evaluation: bool = False,
@@ -28,6 +29,7 @@ class BatchTestGenerator:
         """Initialize the batch generator with configuration."""
         self.start_id = start_id
         self.end_id = end_id
+        self.models = models if models else ["claude-3-5-sonnet-20241022"]
         self.include_docstring = include_docstring
         self.include_ast = include_ast
         self.disable_evaluation = disable_evaluation
@@ -50,8 +52,12 @@ class BatchTestGenerator:
             "--task-id", task_id,
             "--dataset", self.dataset,
             "--output-dir", self.output_dir,
-            "--max-fix-attempts", str(self.max_fix_attempts)
+            "--max-fix-attempts", str(self.max_fix_attempts),
+            "--models"
         ]
+        
+        # Add all models
+        cmd.extend(self.models)
         
         if self.include_docstring:
             cmd.append("--include-docstring")
@@ -114,6 +120,7 @@ class BatchTestGenerator:
         print(f"🎯 Starting batch generation for {self.total_tasks} tasks")
         print(f"📁 Output directory: {self.output_dir}")
         print(f"🔧 Configuration:")
+        print(f"  - Models: {', '.join(self.models)}")
         print(f"  - Include docstrings: {self.include_docstring}")
         print(f"  - Include AST: {self.include_ast}")
         print(f"  - Evaluation disabled: {self.disable_evaluation}")
@@ -214,6 +221,13 @@ Examples:
     
     # Generator options (passed through to test_case_generator.py)
     parser.add_argument(
+        "--models",
+        nargs="+",
+        default=["claude-3-5-sonnet-20241022"],
+        choices=["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-haiku-20240307"],
+        help="Claude model(s) to use for test generation (can specify multiple)"
+    )
+    parser.add_argument(
         "--dataset",
         default="dataset/HumanEval.jsonl",
         help="Path to HumanEval dataset file"
@@ -277,6 +291,7 @@ Examples:
         batch_gen = BatchTestGenerator(
             start_id=args.start,
             end_id=args.end,
+            models=args.models,
             include_docstring=args.include_docstring,
             include_ast=args.include_ast,
             disable_evaluation=args.disable_evaluation,
