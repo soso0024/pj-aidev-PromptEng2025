@@ -1,0 +1,13 @@
+{
+  "total_input_tokens": 6791,
+  "total_output_tokens": 1678,
+  "total_tokens": 8469,
+  "total_cost_usd": 0.045543,
+  "task_id": "HumanEval/50",
+  "generated_file": "generated_tests/test_humaneval_50_docstring_ast_false.py",
+  "evaluation_enabled": true,
+  "evaluation_success": false,
+  "fix_attempts_used": 3,
+  "max_fix_attempts": 3,
+  "code_coverage_percent": 95.0
+}
