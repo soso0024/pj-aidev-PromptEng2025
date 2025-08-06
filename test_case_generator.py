@@ -200,7 +200,7 @@ Start your response with "import pytest" and include only executable Python test
 
         for line in lines:
             stripped_line = line.strip()
-            
+
             # Start collecting lines when we see imports, decorators, or function definitions
             if not code_started and (
                 stripped_line.startswith("import ")
@@ -213,7 +213,9 @@ Start your response with "import pytest" and include only executable Python test
 
             if code_started:
                 # Check for duplicate imports
-                if (stripped_line.startswith("import ") or stripped_line.startswith("from ")):
+                if stripped_line.startswith("import ") or stripped_line.startswith(
+                    "from "
+                ):
                     if stripped_line not in seen_imports:
                         seen_imports.add(stripped_line)
                         code_lines.append(line)
