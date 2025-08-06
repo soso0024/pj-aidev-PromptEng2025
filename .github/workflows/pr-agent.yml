@@ -1,6 +1,10 @@
 on:
-  pull_request:
-    types: [opened, reopened, ready_for_review]
+  push:
+    branches:
+      - "dev/*"
+      - "test/*"
+  # pull_request:
+  #   types: [opened, reopened, ready_for_review]
   issue_comment:
 jobs:
   pr_agent_job:
@@ -20,4 +24,3 @@ jobs:
           GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CONFIG.CUSTOM_MODEL_MAX_TOKENS: 64000
-
