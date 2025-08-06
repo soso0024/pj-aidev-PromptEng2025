@@ -16,7 +16,7 @@ from collections import Counter
 
 class ProblemClassifier:
     """Handles classification of HumanEval problems by complexity and algorithm type."""
-    
+
     def __init__(self, dataset_path: str = "dataset/HumanEval.jsonl"):
         """Initialize the classifier with dataset path."""
         self.dataset_path = Path(dataset_path)
@@ -24,7 +24,7 @@ class ProblemClassifier:
         # Define consistent algorithm type ordering
         self.algorithm_type_order = [
             "list_search",
-            "string_sorting", 
+            "string_sorting",
             "mathematical",
             "list_manipulation",
             "string_manipulation",
@@ -38,8 +38,10 @@ class ProblemClassifier:
             "control_flow_heavy",
             "unknown",
         ]
-    
-    def classify_problem_complexity(self, problem_data: Dict[str, Any]) -> Dict[str, Any]:
+
+    def classify_problem_complexity(
+        self, problem_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Classify a HumanEval problem based on its code structure and complexity."""
         canonical_solution = problem_data.get("canonical_solution", "")
         prompt = problem_data.get("prompt", "")
@@ -238,14 +240,13 @@ class ProblemClassifier:
 
         except Exception as e:
             print(f"Error loading problem classifications: {e}")
-    
+
     def get_classification(self, problem_id: int) -> Dict[str, Any]:
         """Get classification data for a specific problem ID."""
-        return self.problem_classifications.get(problem_id, {
-            "complexity_level": "unknown",
-            "algorithm_type": "unknown"
-        })
-    
+        return self.problem_classifications.get(
+            problem_id, {"complexity_level": "unknown", "algorithm_type": "unknown"}
+        )
+
     def get_all_classifications(self) -> Dict[int, Dict[str, Any]]:
         """Get all problem classifications."""
         return self.problem_classifications

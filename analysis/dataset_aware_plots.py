@@ -15,41 +15,46 @@ import seaborn as sns
 
 class DatasetAwarePlots:
     """Handles the 5 dataset-aware visualization methods for test result analysis."""
-    
-    def __init__(self, data: List[Dict[str, Any]], config_order: List[str], algorithm_type_order: List[str]):
+
+    def __init__(
+        self,
+        data: List[Dict[str, Any]],
+        config_order: List[str],
+        algorithm_type_order: List[str],
+    ):
         """Initialize with loaded data and ordering configurations."""
         self.data = data
         self.config_order = config_order
         self.algorithm_type_order = algorithm_type_order
         self.df = self._prepare_dataframe()
-    
+
     def _prepare_dataframe(self) -> pd.DataFrame:
         """Prepare pandas DataFrame from loaded data."""
         df = pd.DataFrame(self.data)
-        
+
         # Create ordered categorical for consistent display
         df["config_type_display"] = pd.Categorical(
             df["config_type"], categories=self.config_order, ordered=True
         )
-        
+
         return df
-    
+
     def create_all_plots(self, output_path: Path) -> None:
         """Create all dataset-aware visualization plots."""
         print("Creating dataset-aware visualizations...")
-        
+
         self._plot_success_by_complexity(output_path)
         print("  ✓ Created success by complexity analysis")
-        
+
         self._plot_success_by_algorithm_type(output_path)
         print("  ✓ Created success by algorithm type analysis")
-        
+
         self._plot_config_performance_by_complexity(output_path)
         print("  ✓ Created configuration performance by complexity analysis")
-        
+
         self._plot_cost_vs_complexity(output_path)
         print("  ✓ Created cost vs complexity analysis")
-        
+
         self._plot_algorithm_type_distribution(output_path)
         print("  ✓ Created algorithm type distribution analysis")
 

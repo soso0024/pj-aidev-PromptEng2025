@@ -8,7 +8,7 @@ This package contains:
 - problem_classifier: Dataset classification logic
 - data_loader: Data loading and processing
 - traditional_plots: Original 7 visualization methods
-- dataset_aware_plots: New 5 dataset-aware visualizations  
+- dataset_aware_plots: New 5 dataset-aware visualizations
 - analysis_reporter: Statistical analysis and reporting
 """
 
@@ -20,8 +20,8 @@ from .analysis_reporter import AnalysisReporter
 
 __all__ = [
     "ProblemClassifier",
-    "DataLoader", 
+    "DataLoader",
     "TraditionalPlots",
     "DatasetAwarePlots",
-    "AnalysisReporter"
+    "AnalysisReporter",
 ]

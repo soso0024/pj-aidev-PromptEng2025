@@ -12,30 +12,30 @@ import pandas as pd
 
 class AnalysisReporter:
     """Handles statistical analysis and reporting of test result data."""
-    
+
     def __init__(self, data: List[Dict[str, Any]], config_order: List[str]):
         """Initialize with loaded data and configuration order."""
         self.data = data
         self.config_order = config_order
         self.df = self._prepare_dataframe()
-    
+
     def _prepare_dataframe(self) -> pd.DataFrame:
         """Prepare pandas DataFrame from loaded data."""
         df = pd.DataFrame(self.data)
-        
+
         # Create ordered categorical for consistent display
         df["config_type_display"] = pd.Categorical(
             df["config_type"], categories=self.config_order, ordered=True
         )
-        
+
         return df
-    
+
     def generate_all_reports(self) -> None:
         """Generate all analysis reports."""
         print("Generating analysis reports...")
         self.print_summary_stats()
         print("\nAnalysis reports completed!")
-    
+
     def print_summary_stats(self) -> None:
         """Print summary statistics for all configurations."""
         if not self.data:
@@ -190,12 +190,12 @@ class AnalysisReporter:
                         )
                     else:
                         print(f"  {complexity.capitalize()}: Insufficient data")
-    
+
     def get_summary_stats(self) -> Dict[str, Any]:
         """Get summary statistics as dictionary."""
         if not self.data:
             return {}
-        
+
         summary = (
             self.df.groupby("config_type")
             .agg(
@@ -209,5 +209,5 @@ class AnalysisReporter:
             )
             .round(3)
         )
-        
+
         return summary.to_dict()

@@ -16,49 +16,49 @@ import numpy as np
 
 class TraditionalPlots:
     """Handles the original 7 visualization methods for test result analysis."""
-    
+
     def __init__(self, data: List[Dict[str, Any]], config_order: List[str]):
         """Initialize with loaded data and configuration order."""
         self.data = data
         self.config_order = config_order
         self.df = self._prepare_dataframe()
-    
+
     def _prepare_dataframe(self) -> pd.DataFrame:
         """Prepare pandas DataFrame from loaded data."""
         df = pd.DataFrame(self.data)
-        
+
         # Create ordered categorical for consistent display
         df["config_type_display"] = pd.Categorical(
             df["config_type"], categories=self.config_order, ordered=True
         )
-        
+
         return df
-    
+
     def create_all_plots(self, output_path: Path) -> None:
         """Create all traditional visualization plots."""
         print("Creating traditional visualizations...")
-        
+
         self._plot_success_rate(output_path)
         print("  ✓ Created success rate analysis")
-        
+
         self._plot_code_coverage(output_path)
         print("  ✓ Created code coverage analysis")
-        
+
         self._plot_cost_analysis(output_path)
         print("  ✓ Created cost analysis")
-        
+
         self._plot_fix_attempts(output_path)
         print("  ✓ Created fix attempts analysis")
-        
+
         self._plot_success_by_problem(output_path)
         print("  ✓ Created success by problem heatmap")
-        
+
         self._plot_cost_vs_quality(output_path)
         print("  ✓ Created cost vs quality scatter plot")
-        
+
         self._plot_input_tokens(output_path)
         print("  ✓ Created input token analysis")
-    
+
     def _plot_success_rate(self, output_path: Path) -> None:
         """Plot success rate by configuration type."""
         fig, ax = plt.subplots(figsize=(10, 6))
