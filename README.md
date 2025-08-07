@@ -70,7 +70,7 @@ For generating test cases for multiple HumanEval problems automatically, use the
 ```bash
 # See batch/readme.md for detailed usage
 cd batch
-python batch_test_generator.py --start 0 --end 10
+python run_batch_test_case_generator.py --start 0 --end 10
 ```
 
 ### Command Line Options
@@ -455,7 +455,7 @@ Typical usage per problem:
 ```
 project/
    batch/                       # Batch processing tools
-      batch_test_generator.py   # Batch test generation script
+      run_batch_test_case_generator.py   # Batch test generation script
       readme.md                 # Batch processing documentation
    dataset/
       HumanEval.jsonl          # HumanEval dataset

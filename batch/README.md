@@ -20,16 +20,16 @@ Generate test cases for a range of problems:
 
 ```bash
 # Generate tests for HumanEval/0 through HumanEval/10
-python batch_test_generator.py --start 0 --end 10
+python run_batch_test_case_generator.py --start 0 --end 10
 
 # Generate with docstrings and AST for range 0-5
-python batch_test_generator.py --start 0 --end 5 --include-docstring --include-ast
+python run_batch_test_case_generator.py --start 0 --end 5 --include-docstring --include-ast
 
 # Generate specific task IDs
-python batch_test_generator.py --task-ids "HumanEval/0,HumanEval/5,HumanEval/10"
+python run_batch_test_case_generator.py --task-ids "HumanEval/0,HumanEval/5,HumanEval/10"
 
 # Fast generation without evaluation for range 0-20
-python batch_test_generator.py --start 0 --end 20 --disable-evaluation
+python run_batch_test_case_generator.py --start 0 --end 20 --disable-evaluation
 ```
 
 ### Command Line Options
@@ -55,10 +55,10 @@ Generate tests using multiple Claude models simultaneously:
 
 ```bash
 # Use multiple models for comprehensive testing
-python batch_test_generator.py --start 0 --end 5 --models claude-3-5-sonnet-20241022 claude-3-5-haiku-20241022
+python run_batch_test_case_generator.py --start 0 --end 5 --models claude-3-5-sonnet-20241022 claude-3-5-haiku-20241022
 
 # Compare model performance across a range
-python batch_test_generator.py --start 0 --end 10 --models claude-3-5-sonnet-20241022 claude-3-opus-20240229
+python run_batch_test_case_generator.py --start 0 --end 10 --models claude-3-5-sonnet-20241022 claude-3-opus-20240229
 ```
 
 ## Examples
@@ -66,25 +66,25 @@ python batch_test_generator.py --start 0 --end 10 --models claude-3-5-sonnet-202
 ### Generate test for problems 0-10 with full context:
 
 ```bash
-python batch_test_generator.py --start 0 --end 10 --include-docstring --include-ast
+python run_batch_test_case_generator.py --start 0 --end 10 --include-docstring --include-ast
 ```
 
 ### Generate specific problems with evaluation disabled:
 
 ```bash
-python batch_test_generator.py --task-ids "HumanEval/0,HumanEval/15,HumanEval/30" --disable-evaluation
+python run_batch_test_case_generator.py --task-ids "HumanEval/0,HumanEval/15,HumanEval/30" --disable-evaluation
 ```
 
 ### Quiet batch processing for automation:
 
 ```bash
-python batch_test_generator.py --start 0 --end 50 --quiet-evaluation --max-fix-attempts 1
+python run_batch_test_case_generator.py --start 0 --end 50 --quiet-evaluation --max-fix-attempts 1
 ```
 
 ### Custom timeout for complex problems:
 
 ```bash
-python batch_test_generator.py --start 0 --end 10 --task-timeout 600 --include-docstring
+python run_batch_test_case_generator.py --start 0 --end 10 --task-timeout 600 --include-docstring
 ```
 
 ## Interactive Features

@@ -219,16 +219,16 @@ def main():
         epilog="""
 Examples:
   # Generate tests for HumanEval/0 through HumanEval/10
-  python batch_test_generator.py --start 0 --end 10
+  python run_batch_test_case_generator.py --start 0 --end 10
 
   # Generate with docstrings and AST info
-  python batch_test_generator.py --start 0 --end 5 --include-docstring --include-ast
+  python run_batch_test_case_generator.py --start 0 --end 5 --include-docstring --include-ast
 
   # Generate specific task IDs
-  python batch_test_generator.py --task-ids "HumanEval/0,HumanEval/5,HumanEval/10"
+  python run_batch_test_case_generator.py --task-ids "HumanEval/0,HumanEval/5,HumanEval/10"
 
   # Disable evaluation for faster generation
-  python batch_test_generator.py --start 0 --end 20 --disable-evaluation
+  python run_batch_test_case_generator.py --start 0 --end 20 --disable-evaluation
         """,
     )
 
