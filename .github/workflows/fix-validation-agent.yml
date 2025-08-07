@@ -1,0 +1,45 @@
+name: Fix Validation Agent
+
+on:
+  push:
+    branches:
+      - "dev*"
+      - "test*"
+  pull_request:
+    types: [synchronize]
+
+jobs:
+  fix_validation_job:
+    if: ${{ github.event.sender.type != 'Bot' }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+    name: Validate fixes against PR agent comments
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fix Validation Agent step
+        id: fix-validation
+        uses: qodo-ai/pr-agent@main
+        env:
+          CONFIG.MODEL: "gemini/gemini-2.5-flash-preview-05-20"
+          GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONFIG.CUSTOM_MODEL_MAX_TOKENS: 64000
+          CONFIG.PR_COMMANDS: "/review_fixes"
+          CONFIG.ENABLE_FIX_VALIDATION: true
+        with:
+          command: |
+            /review_fixes
+            Please validate that the recent commits address the previous PR agent review comments. 
+            Compare the fixes against the original feedback and confirm:
+            1. Each comment/suggestion has been properly addressed
+            2. The implementation follows best practices
+            3. No new issues were introduced
+            
+            If fixes are incomplete or introduce new problems, provide specific guidance.
