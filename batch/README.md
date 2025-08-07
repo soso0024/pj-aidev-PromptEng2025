@@ -47,6 +47,7 @@ python batch_test_generator.py --start 0 --end 20 --disable-evaluation
 | `--disable-evaluation` | Skip automatic test evaluation              | False                     |
 | `--quiet-evaluation`   | Less verbose evaluation output              | False                     |
 | `--max-fix-attempts N` | Maximum fix attempts per task               | 3                         |
+| `--task-timeout N`     | Timeout in seconds for each task            | 300 (5 minutes)           |
 
 ### Multi-Model Generation
 
@@ -77,6 +78,11 @@ python batch_test_generator.py --task-ids "HumanEval/0,HumanEval/15,HumanEval/30
 python batch_test_generator.py --start 0 --end 50 --quiet-evaluation --max-fix-attempts 1
 ```
 
+### Custom timeout for complex problems:
+```bash
+python batch_test_generator.py --start 0 --end 10 --task-timeout 600 --include-docstring
+```
+
 ## Interactive Features
 
 ### Error Handling
@@ -89,6 +95,8 @@ Options:
 - `y` (yes): Continue with the next task
 - `n` (no): Stop batch processing
 - `q` (quit): Immediately quit the program
+
+**Note**: When using `--quiet-evaluation`, failed tasks automatically continue to the next task without prompting, making it suitable for automation.
 
 ### Progress Tracking
 Real-time progress updates:
@@ -125,10 +133,17 @@ generated_tests/
 
 ## Performance Considerations
 
-- **Timeout**: Each task has a 5-minute timeout to prevent hanging
+- **Timeout**: Each task has a configurable timeout (default 5 minutes) to prevent hanging
 - **Memory**: Processes run sequentially to manage memory usage
 - **API Limits**: Respects Claude API rate limits automatically
 - **Disk Space**: Monitor available space for large batch generations
+
+### Timeout Configuration
+
+Use `--task-timeout` to adjust the per-task timeout based on your needs:
+- **Simple problems**: `--task-timeout 180` (3 minutes)
+- **Complex problems**: `--task-timeout 600` (10 minutes)
+- **Very complex problems**: `--task-timeout 900` (15 minutes)
 
 ## Error Recovery
 

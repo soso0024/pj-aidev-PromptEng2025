@@ -12,6 +12,13 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 import time
+
+# Constants for script paths
+SCRIPT_DIR = Path(__file__).parent
+MAIN_GENERATOR_PATH = SCRIPT_DIR.parent / "test_case_generator.py"
+
+# Add parent directory to path to import model_utils
+sys.path.insert(0, str(SCRIPT_DIR.parent))
 from model_utils import get_available_models, get_default_model
 
 
@@ -25,6 +32,7 @@ class BatchTestGenerator:
                  disable_evaluation: bool = False,
                  max_fix_attempts: int = 3,
                  quiet_evaluation: bool = False,
+                 task_timeout: int = 300,
                  output_dir: str = "generated_tests",
                  dataset: str = "dataset/HumanEval.jsonl"):
         """Initialize the batch generator with configuration."""
@@ -36,8 +44,12 @@ class BatchTestGenerator:
         self.disable_evaluation = disable_evaluation
         self.max_fix_attempts = max_fix_attempts
         self.quiet_evaluation = quiet_evaluation
-        self.output_dir = output_dir
+        self.task_timeout = task_timeout
+        self.output_dir = Path(output_dir)
         self.dataset = dataset
+        
+        # Ensure output directory exists
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         
         # Statistics tracking
         self.total_tasks = 0
@@ -49,10 +61,10 @@ class BatchTestGenerator:
         """Build the command to run for a specific task ID."""
         cmd = [
             sys.executable, 
-            "test_case_generator.py",
+            str(MAIN_GENERATOR_PATH),
             "--task-id", task_id,
             "--dataset", self.dataset,
-            "--output-dir", self.output_dir,
+            "--output-dir", str(self.output_dir),
             "--max-fix-attempts", str(self.max_fix_attempts),
             "--models"
         ]
@@ -86,7 +98,7 @@ class BatchTestGenerator:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=300  # 5 minute timeout per task
+                timeout=self.task_timeout
             )
             
             # Print output
@@ -104,7 +116,7 @@ class BatchTestGenerator:
                 return False
                 
         except subprocess.TimeoutExpired:
-            print(f"⏰ Task {task_id} timed out after 5 minutes")
+            print(f"⏰ Task {task_id} timed out after {self.task_timeout} seconds")
             return False
         except Exception as e:
             print(f"💥 Error running task {task_id}: {e}")
@@ -139,7 +151,7 @@ class BatchTestGenerator:
             else:
                 self.failed_tasks += 1
                 
-                # Ask user if they want to continue on failure
+                # Handle failure based on quiet mode
                 if not self.quiet_evaluation:
                     while True:
                         response = input(f"\n❓ Task {task_id} failed. Continue with remaining tasks? (y/n/q): ").lower().strip()
@@ -159,6 +171,9 @@ class BatchTestGenerator:
                     if response in ['n', 'no']:
                         self.skipped_tasks = self.total_tasks - i
                         break
+                else:
+                    # In quiet mode, automatically continue on failure
+                    print(f"⚠️  Task {task_id} failed. Continuing with next task (quiet mode)...")
         
         # Print final summary
         end_time = time.time()
@@ -264,12 +279,18 @@ Examples:
         action="store_true",
         help="Disable verbose output during error fixing process"
     )
+    parser.add_argument(
+        "--task-timeout",
+        type=int,
+        default=300,
+        help="Timeout in seconds for each individual task (default: 300)"
+    )
     
     args = parser.parse_args()
     
     # Validate arguments
-    if not Path("test_case_generator.py").exists():
-        print("❌ Error: test_case_generator.py not found in current directory")
+    if not MAIN_GENERATOR_PATH.exists():
+        print(f"❌ Error: test_case_generator.py not found at {MAIN_GENERATOR_PATH}")
         return 1
     
     if not Path(args.dataset).exists():
@@ -298,6 +319,7 @@ Examples:
             disable_evaluation=args.disable_evaluation,
             max_fix_attempts=args.max_fix_attempts,
             quiet_evaluation=args.quiet_evaluation,
+            task_timeout=args.task_timeout,
             output_dir=args.output_dir,
             dataset=args.dataset
         )
