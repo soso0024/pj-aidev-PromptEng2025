@@ -35,23 +35,27 @@ class TestCaseGenerator:
         """Initialize the test case generator with Claude API client."""
         self.client = anthropic.Anthropic(api_key=api_key)
         self.problems = []
-        
+
         # Load model configuration from external file
         self.config = self._load_model_config(config_path)
-        self.model_mapping = {model: config["api_name"] for model, config in self.config["models"].items()}
-        
+        self.model_mapping = {
+            model: config["api_name"] for model, config in self.config["models"].items()
+        }
+
         # Set default model if none provided
         if models is None:
             models = [self.config["default_model"]]
-        
+
         # Validate models
         self.models = []
         for model in models:
             if model in self.model_mapping:
                 self.models.append(model)
             else:
-                raise ValueError(f"Unsupported model: {model}. Supported models: {list(self.model_mapping.keys())}")
-        
+                raise ValueError(
+                    f"Unsupported model: {model}. Supported models: {list(self.model_mapping.keys())}"
+                )
+
         self.include_docstring = include_docstring
         self.include_ast = include_ast
         self.show_prompt = show_prompt
@@ -65,13 +69,15 @@ class TestCaseGenerator:
     def _load_model_config(self, config_path: str) -> Dict[str, Any]:
         """Load model configuration from JSON file."""
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except FileNotFoundError:
-            raise FileNotFoundError(f"Model configuration file not found: {config_path}")
+            raise FileNotFoundError(
+                f"Model configuration file not found: {config_path}"
+            )
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in model configuration file: {e}")
-    
+
     def get_model_folder_name(self, model: str) -> str:
         """Convert model name to a folder-friendly string."""
         return self.config["models"][model]["folder_name"]
@@ -281,7 +287,9 @@ Start your response with "import pytest" and include only executable Python test
         estimated_tokens = len(prompt) // 4
         # Use the first model for cost estimation in prompt preview
         first_model = self.models[0] if self.models else self.config["default_model"]
-        estimated_cost = (estimated_tokens / 1000) * self.config["models"][first_model]["pricing"]["input_per_1k"]
+        estimated_cost = (estimated_tokens / 1000) * self.config["models"][first_model][
+            "pricing"
+        ]["input_per_1k"]
 
         print(f"Estimated input tokens: {estimated_tokens}")
         print(f"Estimated input cost: ${estimated_cost:.6f}")
@@ -300,7 +308,9 @@ Start your response with "import pytest" and include only executable Python test
             else:
                 print("Please enter 'y' (yes), 'n' (no), or 'q' (quit)")
 
-    def calculate_cost(self, input_tokens: int, output_tokens: int, model: str) -> float:
+    def calculate_cost(
+        self, input_tokens: int, output_tokens: int, model: str
+    ) -> float:
         """Calculate the cost based on token usage and model."""
         pricing = self.config["models"][model]["pricing"]
         input_cost = (input_tokens / 1000) * pricing["input_per_1k"]
@@ -652,7 +662,12 @@ Requirements:
 Corrected code:"""
 
     def fix_test_cases(
-        self, test_code: str, error_output: str, attempt: int, problem: Dict[str, Any], model: str
+        self,
+        test_code: str,
+        error_output: str,
+        attempt: int,
+        problem: Dict[str, Any],
+        model: str,
     ) -> str:
         """Use LLM to fix test case errors."""
         fix_prompt = self.generate_fix_prompt(test_code, error_output, attempt, problem)
@@ -782,7 +797,9 @@ Corrected code:"""
     ) -> List[str]:
         """Generate test cases for a problem using all selected models, evaluate them, and return final filepaths."""
         print(f"Selected problem: {problem['task_id']}")
-        print(f"Generating test cases using {len(self.models)} model(s): {', '.join(self.models)}")
+        print(
+            f"Generating test cases using {len(self.models)} model(s): {', '.join(self.models)}"
+        )
 
         final_filepaths = []
         model_results = {}
@@ -810,37 +827,52 @@ Corrected code:"""
                     self.evaluate_and_fix_tests(filepath, problem, model)
                 )
                 if evaluation_success:
-                    print(f"🎉 Test generation and evaluation completed successfully for {model}!")
-                    model_results[model] = {"status": "success", "filepath": filepath, "coverage": code_coverage}
+                    print(
+                        f"🎉 Test generation and evaluation completed successfully for {model}!"
+                    )
+                    model_results[model] = {
+                        "status": "success",
+                        "filepath": filepath,
+                        "coverage": code_coverage,
+                    }
                 else:
-                    print(f"⚠️  Test generation completed but evaluation failed for {model}")
-                    model_results[model] = {"status": "evaluation_failed", "filepath": filepath, "coverage": code_coverage}
+                    print(
+                        f"⚠️  Test generation completed but evaluation failed for {model}"
+                    )
+                    model_results[model] = {
+                        "status": "evaluation_failed",
+                        "filepath": filepath,
+                        "coverage": code_coverage,
+                    }
             else:
-                model_results[model] = {"status": "generated_no_eval", "filepath": filepath}
+                model_results[model] = {
+                    "status": "generated_no_eval",
+                    "filepath": filepath,
+                }
 
             # Update final stats after complete process and get final filepath
             final_filepath = self.update_final_stats(
                 filepath, problem, evaluation_success, fix_attempts_used, code_coverage
             )
-            
+
             final_filepaths.append(final_filepath)
 
         # Print summary of model results
         self._print_model_summary(model_results)
-        
+
         return final_filepaths
-    
+
     def _print_model_summary(self, model_results: Dict[str, Dict[str, Any]]) -> None:
         """Print a summary of results for all models."""
         print(f"\n{'='*60}")
         print(f"MODEL PROCESSING SUMMARY")
         print(f"{'='*60}")
-        
+
         successful_models = []
         failed_generation = []
         failed_evaluation = []
         no_eval_models = []
-        
+
         for model, result in model_results.items():
             status = result["status"]
             if status == "success":
@@ -853,32 +885,36 @@ Corrected code:"""
                 failed_evaluation.append(f"{model} (Coverage: {coverage:.1f}%)")
             elif status == "generated_no_eval":
                 no_eval_models.append(model)
-        
+
         if successful_models:
             print(f"✅ Successfully completed ({len(successful_models)}):")
             for model in successful_models:
                 print(f"   • {model}")
-        
+
         if no_eval_models:
             print(f"📝 Generated without evaluation ({len(no_eval_models)}):")
             for model in no_eval_models:
                 print(f"   • {model}")
-        
+
         if failed_evaluation:
             print(f"⚠️  Generated but evaluation failed ({len(failed_evaluation)}):")
             for model in failed_evaluation:
                 print(f"   • {model}")
-        
+
         if failed_generation:
             print(f"❌ Failed to generate ({len(failed_generation)}):")
             for model in failed_generation:
                 print(f"   • {model}")
-        
+
         total_attempted = len(model_results)
         total_with_output = len([r for r in model_results.values() if r["filepath"]])
-        print(f"\n📊 Overall: {total_with_output}/{total_attempted} models produced test files")
+        print(
+            f"\n📊 Overall: {total_with_output}/{total_attempted} models produced test files"
+        )
 
-    def generate_for_random_problem(self, output_dir: str = "generated_tests") -> List[str]:
+    def generate_for_random_problem(
+        self, output_dir: str = "generated_tests"
+    ) -> List[str]:
         """Generate test cases for a randomly selected problem."""
         if not self.problems:
             raise ValueError("No problems loaded. Call load_dataset() first.")
@@ -923,7 +959,7 @@ def main():
         nargs="+",
         default=[get_default_model()],
         choices=get_available_models(),
-        help="Claude model(s) to use for test generation (can specify multiple)"
+        help="Claude model(s) to use for test generation (can specify multiple)",
     )
     parser.add_argument(
         "--include-docstring",
@@ -991,7 +1027,7 @@ def main():
             )
         else:
             output_files = generator.generate_for_random_problem(args.output_dir)
-        
+
         # Check if any files were generated
         if not output_files:
             print(f"\n❌ No test cases were generated successfully for any model.")
@@ -1003,7 +1039,7 @@ def main():
         if output_files:
             print(f"\n✅ Generated test files!")
             print(f"📁 Output folders and files ({len(output_files)}):")
-            
+
             # Group files by folder
             folders = {}
             for output_file in output_files:
@@ -1012,12 +1048,12 @@ def main():
                 if folder not in folders:
                     folders[folder] = []
                 folders[folder].append(filename)
-            
+
             for i, (folder, files) in enumerate(folders.items(), 1):
                 print(f"  {i}. {folder}/")
                 for file in files:
                     print(f"     └── {file}")
-            
+
             print(f"\n📊 Token Usage & Cost:")
             print(f"  Input tokens: {stats['total_input_tokens']}")
             print(f"  Output tokens: {stats['total_output_tokens']}")
