@@ -10,7 +10,7 @@ from pathlib import Path
 def load_model_config(config_path: str = "models_config.json") -> Dict[str, Any]:
     """Load model configuration from JSON file."""
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         raise FileNotFoundError(f"Model configuration file not found: {config_path}")

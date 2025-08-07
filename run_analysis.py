@@ -164,17 +164,15 @@ def parse_arguments():
     parser.add_argument(
         "--results-dir",
         required=True,
-        help="Directory containing test results (.stats.json files)"
+        help="Directory containing test results (.stats.json files)",
     )
     parser.add_argument(
         "--dataset-path",
         default="dataset/HumanEval.jsonl",
-        help="Path to the dataset file (default: dataset/HumanEval.jsonl)"
+        help="Path to the dataset file (default: dataset/HumanEval.jsonl)",
     )
     parser.add_argument(
-        "--output-dir",
-        required=True,
-        help="Output directory for visualization files"
+        "--output-dir", required=True, help="Output directory for visualization files"
     )
     args = parser.parse_args()
     if not os.path.isdir(args.results_dir):
@@ -189,7 +187,7 @@ def main():
     # Parse command-line arguments
     args = parse_arguments()
     os.makedirs(args.output_dir, exist_ok=True)
-    
+
     print("🔍 Test Results Visualization Tool (Refactored)")
     print("=" * 50)
     print(f"📁 Results directory: {args.results_dir}")
@@ -198,8 +196,7 @@ def main():
 
     # Initialize analyzer with user-specified directories
     analyzer = TestResultsAnalyzer(
-        results_dir=args.results_dir,
-        dataset_path=args.dataset_path
+        results_dir=args.results_dir, dataset_path=args.dataset_path
     )
 
     # Load data
@@ -227,7 +224,9 @@ def main():
     # Print analysis reports
     analyzer.print_summary_stats()
 
-    print(f"\n🎉 Analysis complete! Check the '{args.output_dir}/' directory for graphs.")
+    print(
+        f"\n🎉 Analysis complete! Check the '{args.output_dir}/' directory for graphs."
+    )
 
 
 if __name__ == "__main__":
