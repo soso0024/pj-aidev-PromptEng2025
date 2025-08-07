@@ -18,4 +18,4 @@ jobs:
         uses: rickstaa/action-black@v1.3.3
         with:
           black_args: >
-            . --check --diff --exclude '/generated_tests*'
+            . --check --diff --exclude '/generated_testse.*'
