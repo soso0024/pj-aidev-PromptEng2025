@@ -2,22 +2,37 @@ name: Fix Validation Agent
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    types: [synchronize]
+  issue_comment:
+    types: [created]
 
 jobs:
   fix_validation_job:
-    if: ${{ github.event.sender.type != 'Bot' }}
+    if: |
+      github.event.sender.type != 'Bot' && (
+        github.event_name == 'pull_request' ||
+        (github.event_name == 'issue_comment' && 
+         github.event.issue.pull_request != null && 
+         contains(github.event.comment.body, '/review_fixes'))
+      )
     runs-on: ubuntu-latest
     permissions:
       issues: write
       pull-requests: write
       contents: read
+      actions: read
+      checks: read
     name: Validate fixes against PR agent comments
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Determine command
+        id: determine-command
+        run: |
+          echo "command=/review_fixes" >> $GITHUB_OUTPUT
 
       - name: Fix Validation Agent step
         id: fix-validation
@@ -27,15 +42,7 @@ jobs:
           GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CONFIG.CUSTOM_MODEL_MAX_TOKENS: 64000
-          CONFIG.PR_COMMANDS: "/review_fixes"
           CONFIG.ENABLE_FIX_VALIDATION: true
+          CONFIG.VERBOSITY_LEVEL: 2
         with:
-          command: |
-            /review_fixes
-            Please validate that the recent commits address the previous PR agent review comments. 
-            Compare the fixes against the original feedback and confirm:
-            1. Each comment/suggestion has been properly addressed
-            2. The implementation follows best practices
-            3. No new issues were introduced
-
-            If fixes are incomplete or introduce new problems, provide specific guidance.
+          command: /review_fixes
