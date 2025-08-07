@@ -1,3 +1,5 @@
+name: PR Agent
+
 on:
   # push:
   #   branches:
