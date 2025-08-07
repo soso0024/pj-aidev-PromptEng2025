@@ -1,12 +1,8 @@
 name: Fix Validation Agent
 
 on:
-  push:
-    branches:
-      - "dev*"
-      - "test*"
   pull_request:
-    types: [synchronize]
+    types: [opened, reopened, ready_for_review]
 
 jobs:
   fix_validation_job:
