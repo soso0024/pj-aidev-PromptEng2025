@@ -50,7 +50,7 @@ export ANTHROPIC_API_KEY="your-api-key-here"
 #### Method 3: Command Line
 
 ```bash
-python test_case_generator.py --api-key "your-api-key-here"
+python run_test_case_generator.py --api-key "your-api-key-here"
 ```
 
 ## Usage
@@ -60,7 +60,7 @@ python test_case_generator.py --api-key "your-api-key-here"
 Generate test cases for a random problem:
 
 ```bash
-python test_case_generator.py
+python run_test_case_generator.py
 ```
 
 ### Batch Generation
@@ -93,43 +93,43 @@ python batch_test_generator.py --start 0 --end 10
 #### Generate test for a random problem:
 
 ```bash
-python test_case_generator.py
+python run_test_case_generator.py
 ```
 
 #### Generate test for a specific problem:
 
 ```bash
-python test_case_generator.py --task-id "HumanEval/0"
+python run_test_case_generator.py --task-id "HumanEval/0"
 ```
 
 #### Include docstring for more context (uses more tokens):
 
 ```bash
-python test_case_generator.py --include-docstring
+python run_test_case_generator.py --include-docstring
 ```
 
 #### Include AST representation for enhanced understanding:
 
 ```bash
-python test_case_generator.py --include-ast
+python run_test_case_generator.py --include-ast
 ```
 
 #### Preview prompt before sending to LLM:
 
 ```bash
-python test_case_generator.py --show-prompt
+python run_test_case_generator.py --show-prompt
 ```
 
 #### Use custom dataset and output directory:
 
 ```bash
-python test_case_generator.py --dataset path/to/custom.jsonl --output-dir my_tests
+python run_test_case_generator.py --dataset path/to/custom.jsonl --output-dir my_tests
 ```
 
 #### Combine options:
 
 ```bash
-python test_case_generator.py --task-id "HumanEval/5" --include-docstring --include-ast --show-prompt --output-dir custom_tests
+python run_test_case_generator.py --task-id "HumanEval/5" --include-docstring --include-ast --show-prompt --output-dir custom_tests
 ```
 
 ### Evaluation and Error Fixing
@@ -139,7 +139,7 @@ The tool automatically evaluates generated test cases and fixes errors using an 
 #### Generate with automatic evaluation (default):
 
 ```bash
-python test_case_generator.py --task-id "HumanEval/0"
+python run_test_case_generator.py --task-id "HumanEval/0"
 ```
 
 This will:
@@ -154,16 +154,16 @@ This will:
 
 ```bash
 # Disable evaluation (original behavior)
-python test_case_generator.py --task-id "HumanEval/0" --disable-evaluation
+python run_test_case_generator.py --task-id "HumanEval/0" --disable-evaluation
 
 # Set maximum fix attempts
-python test_case_generator.py --task-id "HumanEval/0" --max-fix-attempts 5
+python run_test_case_generator.py --task-id "HumanEval/0" --max-fix-attempts 5
 
 # Quiet mode (less verbose output during fixing)
-python test_case_generator.py --task-id "HumanEval/0" --quiet-evaluation
+python run_test_case_generator.py --task-id "HumanEval/0" --quiet-evaluation
 
 # Interactive mode (approve each fix attempt)
-python test_case_generator.py --task-id "HumanEval/0" --show-prompt
+python run_test_case_generator.py --task-id "HumanEval/0" --show-prompt
 ```
 
 #### White Box Error Fixing
@@ -374,7 +374,7 @@ The new options provide different levels of context and cost:
 #### Default (Signature Only) - Lowest Cost:
 
 ```bash
-python test_case_generator.py
+python run_test_case_generator.py
 ```
 
 - Sends only function signature: `def function_name(params) -> return_type:`
@@ -384,7 +384,7 @@ python test_case_generator.py
 #### With Docstring - Medium Cost, More Context:
 
 ```bash
-python test_case_generator.py --include-docstring
+python run_test_case_generator.py --include-docstring
 ```
 
 - Sends full function signature + docstring with examples
@@ -394,7 +394,7 @@ python test_case_generator.py --include-docstring
 #### With AST - Higher Cost, Enhanced Understanding:
 
 ```bash
-python test_case_generator.py --include-ast
+python run_test_case_generator.py --include-ast
 ```
 
 - Sends function signature + AST representation of canonical solution
@@ -404,7 +404,7 @@ python test_case_generator.py --include-ast
 #### With Both - Highest Cost, Maximum Context:
 
 ```bash
-python test_case_generator.py --include-docstring --include-ast
+python run_test_case_generator.py --include-docstring --include-ast
 ```
 
 - Sends full function signature + docstring + AST representation
@@ -478,7 +478,7 @@ project/
    .env                         # API key configuration
    .gitignore                   # Git ignore rules
    requirements.txt             # Python dependencies
-   test_case_generator.py       # Main test generation script
+   run_test_case_generator.py       # Main test generation script
    visualize_results.py         # Results analysis and visualization tool
    README.md                    # This file
 ```
@@ -566,7 +566,7 @@ Each `.stats.json` file contains:
 For additional help:
 
 ```bash
-python test_case_generator.py --help
+python run_test_case_generator.py --help
 ```
 
 ## Advanced Usage Tips
@@ -575,10 +575,10 @@ python test_case_generator.py --help
 
 ```bash
 # Generate multiple variants of the same problem
-python test_case_generator.py --task-id "HumanEval/0"
-python test_case_generator.py --task-id "HumanEval/0" --include-docstring
-python test_case_generator.py --task-id "HumanEval/0" --include-ast
-python test_case_generator.py --task-id "HumanEval/0" --include-docstring --include-ast
+python run_test_case_generator.py --task-id "HumanEval/0"
+python run_test_case_generator.py --task-id "HumanEval/0" --include-docstring
+python run_test_case_generator.py --task-id "HumanEval/0" --include-ast
+python run_test_case_generator.py --task-id "HumanEval/0" --include-docstring --include-ast
 ```
 
 ### Cost-Effective Workflow

@@ -34,20 +34,20 @@ python batch_test_generator.py --start 0 --end 20 --disable-evaluation
 
 ### Command Line Options
 
-| Option                 | Description                                 | Default                   |
-| ---------------------- | ------------------------------------------- | ------------------------- |
-| `--start N`            | Start task ID number                        | 0                         |
-| `--end N`              | End task ID number                          | 50                        |
-| `--task-ids "X,Y,Z"`   | Comma-separated specific task IDs           | None (use range)          |
+| Option                   | Description                                   | Default                    |
+| ------------------------ | --------------------------------------------- | -------------------------- |
+| `--start N`              | Start task ID number                          | 0                          |
+| `--end N`                | End task ID number                            | 50                         |
+| `--task-ids "X,Y,Z"`     | Comma-separated specific task IDs             | None (use range)           |
 | `--models MODEL1 MODEL2` | Claude model(s) to use (can specify multiple) | claude-3-5-sonnet-20241022 |
-| `--dataset PATH`       | Path to HumanEval dataset file              | dataset/HumanEval.jsonl   |
-| `--output-dir DIR`     | Output directory for test files             | generated_tests           |
-| `--include-docstring`  | Include function docstring in prompt        | False                     |
-| `--include-ast`        | Include AST of canonical solution in prompt | False                     |
-| `--disable-evaluation` | Skip automatic test evaluation              | False                     |
-| `--quiet-evaluation`   | Less verbose evaluation output              | False                     |
-| `--max-fix-attempts N` | Maximum fix attempts per task               | 3                         |
-| `--task-timeout N`     | Timeout in seconds for each task            | 300 (5 minutes)           |
+| `--dataset PATH`         | Path to HumanEval dataset file                | dataset/HumanEval.jsonl    |
+| `--output-dir DIR`       | Output directory for test files               | generated_tests            |
+| `--include-docstring`    | Include function docstring in prompt          | False                      |
+| `--include-ast`          | Include AST of canonical solution in prompt   | False                      |
+| `--disable-evaluation`   | Skip automatic test evaluation                | False                      |
+| `--quiet-evaluation`     | Less verbose evaluation output                | False                      |
+| `--max-fix-attempts N`   | Maximum fix attempts per task                 | 3                          |
+| `--task-timeout N`       | Timeout in seconds for each task              | 300 (5 minutes)            |
 
 ### Multi-Model Generation
 
@@ -64,21 +64,25 @@ python batch_test_generator.py --start 0 --end 10 --models claude-3-5-sonnet-202
 ## Examples
 
 ### Generate test for problems 0-10 with full context:
+
 ```bash
 python batch_test_generator.py --start 0 --end 10 --include-docstring --include-ast
 ```
 
 ### Generate specific problems with evaluation disabled:
+
 ```bash
 python batch_test_generator.py --task-ids "HumanEval/0,HumanEval/15,HumanEval/30" --disable-evaluation
 ```
 
 ### Quiet batch processing for automation:
+
 ```bash
 python batch_test_generator.py --start 0 --end 50 --quiet-evaluation --max-fix-attempts 1
 ```
 
 ### Custom timeout for complex problems:
+
 ```bash
 python batch_test_generator.py --start 0 --end 10 --task-timeout 600 --include-docstring
 ```
@@ -86,12 +90,15 @@ python batch_test_generator.py --start 0 --end 10 --task-timeout 600 --include-d
 ## Interactive Features
 
 ### Error Handling
+
 When a task fails during batch processing, you'll be prompted:
+
 ```
 ❓ Task HumanEval/5 failed. Continue with remaining tasks? (y/n/q):
 ```
 
 Options:
+
 - `y` (yes): Continue with the next task
 - `n` (no): Stop batch processing
 - `q` (quit): Immediately quit the program
@@ -99,14 +106,18 @@ Options:
 **Note**: When using `--quiet-evaluation`, failed tasks automatically continue to the next task without prompting, making it suitable for automation.
 
 ### Progress Tracking
+
 Real-time progress updates:
+
 ```
 📊 Progress: 3/10 (30.0%)
 🚀 Processing HumanEval/2
 ```
 
 ### Final Summary
+
 Comprehensive batch processing report:
+
 ```
 🏁 BATCH PROCESSING COMPLETE
 📊 Summary:
@@ -141,6 +152,7 @@ generated_tests/
 ### Timeout Configuration
 
 Use `--task-timeout` to adjust the per-task timeout based on your needs:
+
 - **Simple problems**: `--task-timeout 180` (3 minutes)
 - **Complex problems**: `--task-timeout 600` (10 minutes)
 - **Very complex problems**: `--task-timeout 900` (15 minutes)
@@ -156,13 +168,13 @@ The batch generator includes robust error handling:
 
 ## Integration with Main Tool
 
-The batch generator wraps the main `test_case_generator.py` tool, passing through all supported options. Ensure the main generator is in the same directory.
+The batch generator wraps the main `run_test_case_generator.py` tool, passing through all supported options. Ensure the main generator is in the same directory.
 
 ## Requirements
 
 - Python 3.8+
 - All dependencies from main test generator
-- `test_case_generator.py` in the same directory
+- `run_test_case_generator.py` in the same directory
 - Valid HumanEval dataset file
 
 ## Tips for Effective Batch Processing

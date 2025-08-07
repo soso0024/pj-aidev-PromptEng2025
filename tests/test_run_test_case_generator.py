@@ -15,7 +15,7 @@ from pathlib import Path
 from unittest.mock import Mock, MagicMock, patch, mock_open, call
 import anthropic
 
-from test_case_generator import TestCaseGenerator
+from run_test_case_generator import TestCaseGenerator
 
 
 class TestTestCaseGeneratorInitialization:
