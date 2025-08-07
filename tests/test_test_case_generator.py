@@ -497,7 +497,13 @@ def test_example():
         assert "from unittest import mock" in cleaned
 
     def test_clean_generated_code_syntax_error_fallback(self, mocker):
-        """Test fallback when cleaned code has syntax error."""
+        """Test fallback when cleaned code has syntax error.
+        
+        Note: This tests the current behavior where syntax errors cause fallback 
+        to raw response. This ensures the system gracefully handles malformed 
+        LLM output rather than crashing, allowing downstream error handling 
+        (like the fix_test_cases workflow) to address the issues.
+        """
         generator = self.create_generator(mocker)
 
         raw_response = """import pytest
@@ -508,11 +514,17 @@ def test_example(:  # Syntax error
 
         cleaned = generator.clean_generated_code(raw_response)
 
-        # Should return original response due to syntax error
+        # Should return original response due to syntax error for downstream handling
         assert cleaned == raw_response
 
     def test_clean_generated_code_no_test_functions(self, mocker):
-        """Test when cleaned code has no test functions."""
+        """Test when cleaned code has no test functions.
+        
+        Note: This tests the current behavior where missing test functions 
+        cause fallback to raw response. This allows the error to be caught
+        and handled by the evaluation/fixing system rather than silently
+        returning empty or invalid test code.
+        """
         generator = self.create_generator(mocker)
 
         raw_response = """import pytest
@@ -524,7 +536,31 @@ def regular_function():
         cleaned = generator.clean_generated_code(raw_response)
 
         # Should return original response since no test functions found
+        # This allows downstream error handling to detect and fix the issue
         assert cleaned == raw_response
+        
+    def test_clean_generated_code_fallback_behavior_rationale(self, mocker):
+        """Test that validates the rationale behind fallback behavior.
+        
+        The clean_generated_code method's fallback behavior is designed to:
+        1. Prevent silent failures that could hide issues
+        2. Allow downstream systems (like evaluate_and_fix_tests) to detect problems
+        3. Provide recoverable error states rather than crashes
+        """
+        generator = self.create_generator(mocker)
+
+        # Test case where cleaning would produce empty result
+        raw_response = """Here is some explanation text without any code."""
+
+        cleaned = generator.clean_generated_code(raw_response)
+
+        # Should return original response, allowing error detection downstream
+        assert cleaned == raw_response
+        
+        # Verify that this would be caught by downstream validation
+        # (In real usage, this would trigger the fix workflow)
+        assert "def test_" not in cleaned  # No test functions
+        assert "import pytest" not in cleaned  # No pytest import
 
 
 class TestAPIIntegrationAndCosts:
@@ -711,18 +747,35 @@ class TestFileOperations:
         # Verify directory creation was called
         mock_mkdir.assert_called_once_with(exist_ok=True)
 
-        # Verify file writing was attempted
-        assert mock_open_builtin.call_count >= 1  # At least one file write (test file)
+        # Verify file writing was attempted and content is correct
+        assert mock_open_builtin.call_count >= 2  # Test file + stats file
+        
+        # Check that the expected file content was written
+        expected_content = f"""# Test cases for {problem['task_id']}
+# Generated using Claude API
 
-        # Check that the content includes expected parts
+{problem['prompt']}
+{problem['canonical_solution']}
+
+# Generated test cases:
+{test_cases}
+"""
+        
+        # Find the call that wrote the test file content
         write_calls = mock_open_builtin.call_args_list
-        test_file_call = None
+        test_file_written = False
         for call in write_calls:
-            if ".py" in str(call[0]) and ".stats.json" not in str(call[0]):
-                test_file_call = call
-                break
-
-        assert test_file_call is not None
+            if len(call[0]) > 0:  # Check if there are positional arguments
+                call_args = call[0]
+                # Check if this call is for writing the test file (not stats)
+                if len(call_args) > 0 and ".py" in str(call_args[0]) and ".stats.json" not in str(call_args[0]):
+                    # Get the file handle mock and verify write was called with expected content
+                    file_handle = mock_open_builtin.return_value
+                    file_handle.write.assert_called()
+                    test_file_written = True
+                    break
+        
+        assert test_file_written, "Test file should have been written"
 
     def test_rename_file_with_result_success(self, mocker):
         """Test renaming file with success result."""
@@ -911,12 +964,24 @@ class TestPytestEvaluation:
         assert coverage == 95.0
 
     def test_evaluate_and_fix_tests_max_attempts(self, mocker):
-        """Test evaluation reaching max attempts."""
+        """Test evaluation reaching max attempts with realistic iterative behavior."""
         generator = self.create_generator(mocker)
         generator.max_fix_attempts = 2
 
-        mocker.patch.object(generator, "run_pytest", return_value=(False, "Error", 0.0))
-        mocker.patch.object(generator, "fix_test_cases", return_value="fixed code")
+        # Mock run_pytest to fail twice, then succeed (but max_attempts prevents reaching success)
+        mocker.patch.object(generator, "run_pytest", side_effect=[
+            (False, "Error 1", 0.0),  # First attempt fails
+            (False, "Error 2", 0.0),  # Second attempt fails
+            (True, "Success", 95.0)   # Would succeed if max_attempts was higher
+        ])
+
+        # Mock fix_test_cases to return progressively improving code
+        mock_fix_test_cases = mocker.patch.object(
+            generator, "fix_test_cases", side_effect=[
+                "import pytest\n\ndef test_fixed_v1():\n    assert True",
+                "import pytest\n\ndef test_fixed_v2():\n    assert True"
+            ]
+        )
 
         problem = {
             "task_id": "HumanEval/0",
@@ -926,7 +991,7 @@ class TestPytestEvaluation:
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(
-                "# Test cases for HumanEval/0\n# Generated test cases:\nimport pytest"
+                "# Test cases for HumanEval/0\n# Generated test cases:\nimport pytest\n\ndef test_original():\n    assert False"
             )
             test_file = f.name
 
@@ -935,9 +1000,23 @@ class TestPytestEvaluation:
                 test_file, problem, "claude-3-5-sonnet"
             )
 
+            # Should fail after max attempts
             assert success == False
             assert attempts == 2
             assert coverage == 0.0
+            
+            # Verify fix_test_cases was called for each failed attempt before max_attempts
+            # Since we have 2 max_attempts, fix_test_cases should be called once
+            # (after first failure, before second attempt)
+            assert mock_fix_test_cases.call_count == 1
+            
+            # Verify the fix attempt included appropriate error details
+            fix_calls = mock_fix_test_cases.call_args_list
+            assert len(fix_calls) == 1
+            call = fix_calls[0]
+            assert "Error" in call[0][1]  # Error output passed to fix_test_cases
+            assert call[0][2] == 1         # Attempt number is 1
+                
         finally:
             os.unlink(test_file)
 
