@@ -13,6 +13,7 @@ This is a refactored version with modular architecture for better maintainabilit
 - analysis_reporter.py: Statistical analysis and reporting
 """
 
+import argparse
 import os
 from pathlib import Path
 from typing import Dict, List, Any
@@ -155,13 +156,45 @@ class TestResultsAnalyzer:
         }
 
 
+def parse_arguments():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Test Results Visualization Tool - Analyze generated test results and create visualizations"
+    )
+    parser.add_argument(
+        "--results-dir",
+        required=True,
+        help="Directory containing test results (.stats.json files)"
+    )
+    parser.add_argument(
+        "--dataset-path",
+        default="dataset/HumanEval.jsonl",
+        help="Path to the dataset file (default: dataset/HumanEval.jsonl)"
+    )
+    parser.add_argument(
+        "--output-dir",
+        required=True,
+        help="Output directory for visualization files"
+    )
+    return parser.parse_args()
+
+
 def main():
     """Main entry point for the visualization tool."""
+    # Parse command-line arguments
+    args = parse_arguments()
+    
     print("🔍 Test Results Visualization Tool (Refactored)")
     print("=" * 50)
+    print(f"📁 Results directory: {args.results_dir}")
+    print(f"📊 Dataset path: {args.dataset_path}")
+    print(f"📈 Output directory: {args.output_dir}")
 
-    # Initialize analyzer
-    analyzer = TestResultsAnalyzer()
+    # Initialize analyzer with user-specified directories
+    analyzer = TestResultsAnalyzer(
+        results_dir=args.results_dir,
+        dataset_path=args.dataset_path
+    )
 
     # Load data
     analyzer.load_data()
@@ -183,12 +216,12 @@ def main():
         return
 
     # Create visualizations
-    analyzer.create_visualizations()
+    analyzer.create_visualizations(args.output_dir)
 
     # Print analysis reports
     analyzer.print_summary_stats()
 
-    print(f"\n🎉 Analysis complete! Check the 'visualizations/' directory for graphs.")
+    print(f"\n🎉 Analysis complete! Check the '{args.output_dir}/' directory for graphs.")
 
 
 if __name__ == "__main__":
