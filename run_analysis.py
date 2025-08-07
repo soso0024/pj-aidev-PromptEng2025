@@ -176,13 +176,19 @@ def parse_arguments():
         required=True,
         help="Output directory for visualization files"
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if not os.path.isdir(args.results_dir):
+        parser.error(f"Error: Results directory '{args.results_dir}' not found.")
+    if not os.path.isfile(args.dataset_path):
+        parser.error(f"Error: Dataset file '{args.dataset_path}' not found.")
+    return args
 
 
 def main():
     """Main entry point for the visualization tool."""
     # Parse command-line arguments
     args = parse_arguments()
+    os.makedirs(args.output_dir, exist_ok=True)
     
     print("🔍 Test Results Visualization Tool (Refactored)")
     print("=" * 50)
