@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 import time
+from model_utils import get_available_models, get_default_model
 
 
 class BatchTestGenerator:
@@ -29,7 +30,7 @@ class BatchTestGenerator:
         """Initialize the batch generator with configuration."""
         self.start_id = start_id
         self.end_id = end_id
-        self.models = models if models else ["claude-3-5-sonnet-20241022"]
+        self.models = models if models else [get_default_model()]
         self.include_docstring = include_docstring
         self.include_ast = include_ast
         self.disable_evaluation = disable_evaluation
@@ -223,8 +224,8 @@ Examples:
     parser.add_argument(
         "--models",
         nargs="+",
-        default=["claude-3-5-sonnet-20241022"],
-        choices=["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-haiku-20240307"],
+        default=[get_default_model()],
+        choices=get_available_models(),
         help="Claude model(s) to use for test generation (can specify multiple)"
     )
     parser.add_argument(

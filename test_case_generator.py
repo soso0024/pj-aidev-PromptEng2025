@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Tuple
 import anthropic
 from dotenv import load_dotenv
+from model_utils import get_available_models, get_default_model
 
 
 class TestCaseGenerator:
@@ -29,21 +30,19 @@ class TestCaseGenerator:
         enable_evaluation: bool = True,
         max_fix_attempts: int = 3,
         verbose_evaluation: bool = True,
+        config_path: str = "models_config.json",
     ):
         """Initialize the test case generator with Claude API client."""
         self.client = anthropic.Anthropic(api_key=api_key)
         self.problems = []
         
-        # Model configuration
-        self.model_mapping = {
-            "claude-3-5-sonnet-20241022": "claude-3-5-sonnet-20241022",
-            "claude-3-5-haiku-20241022": "claude-3-5-haiku-20241022", 
-            "claude-3-haiku-20240307": "claude-3-haiku-20240307"
-        }
+        # Load model configuration from external file
+        self.config = self._load_model_config(config_path)
+        self.model_mapping = {model: config["api_name"] for model, config in self.config["models"].items()}
         
         # Set default model if none provided
         if models is None:
-            models = ["claude-3-5-sonnet-20241022"]
+            models = [self.config["default_model"]]
         
         # Validate models
         self.models = []
@@ -63,19 +62,19 @@ class TestCaseGenerator:
         self.total_output_tokens = 0
         self.total_cost = 0.0
 
-        # Claude 3.5 Sonnet pricing (as of 2024) - using as default
-        # TODO: Add pricing for different models
-        self.input_cost_per_1k_tokens = 0.003  # $3 per 1M tokens
-        self.output_cost_per_1k_tokens = 0.015  # $15 per 1M tokens
-
+    def _load_model_config(self, config_path: str) -> Dict[str, Any]:
+        """Load model configuration from JSON file."""
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Model configuration file not found: {config_path}")
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in model configuration file: {e}")
+    
     def get_model_folder_name(self, model: str) -> str:
         """Convert model name to a folder-friendly string."""
-        model_folder_map = {
-            "claude-3-5-sonnet-20241022": "claude-3-5-sonnet",
-            "claude-3-5-haiku-20241022": "claude-3-5-haiku", 
-            "claude-3-haiku-20240307": "claude-3-haiku"
-        }
-        return model_folder_map.get(model, model)
+        return self.config["models"][model]["folder_name"]
 
     def load_dataset(self, file_path: str) -> None:
         """Load the HumanEval dataset from JSONL file."""
@@ -280,7 +279,9 @@ Start your response with "import pytest" and include only executable Python test
 
         # Estimate token count (rough approximation: 1 token ≈ 4 chars)
         estimated_tokens = len(prompt) // 4
-        estimated_cost = (estimated_tokens / 1000) * self.input_cost_per_1k_tokens
+        # Use the first model for cost estimation in prompt preview
+        first_model = self.models[0] if self.models else self.config["default_model"]
+        estimated_cost = (estimated_tokens / 1000) * self.config["models"][first_model]["pricing"]["input_per_1k"]
 
         print(f"Estimated input tokens: {estimated_tokens}")
         print(f"Estimated input cost: ${estimated_cost:.6f}")
@@ -299,10 +300,11 @@ Start your response with "import pytest" and include only executable Python test
             else:
                 print("Please enter 'y' (yes), 'n' (no), or 'q' (quit)")
 
-    def calculate_cost(self, input_tokens: int, output_tokens: int) -> float:
-        """Calculate the cost based on token usage."""
-        input_cost = (input_tokens / 1000) * self.input_cost_per_1k_tokens
-        output_cost = (output_tokens / 1000) * self.output_cost_per_1k_tokens
+    def calculate_cost(self, input_tokens: int, output_tokens: int, model: str) -> float:
+        """Calculate the cost based on token usage and model."""
+        pricing = self.config["models"][model]["pricing"]
+        input_cost = (input_tokens / 1000) * pricing["input_per_1k"]
+        output_cost = (output_tokens / 1000) * pricing["output_per_1k"]
         return input_cost + output_cost
 
     def get_usage_stats(self) -> Dict[str, Any]:
@@ -511,7 +513,7 @@ Start your response with "import pytest" and include only executable Python test
             self.total_input_tokens += input_tokens
             self.total_output_tokens += output_tokens
 
-            cost = self.calculate_cost(input_tokens, output_tokens)
+            cost = self.calculate_cost(input_tokens, output_tokens, model)
             self.total_cost += cost
 
             raw_response = response.content[0].text
@@ -675,7 +677,7 @@ Corrected code:"""
             self.total_input_tokens += usage.input_tokens
             self.total_output_tokens += usage.output_tokens
 
-            cost = self.calculate_cost(usage.input_tokens, usage.output_tokens)
+            cost = self.calculate_cost(usage.input_tokens, usage.output_tokens, model)
             self.total_cost += cost
 
             if self.verbose_evaluation:
@@ -783,6 +785,7 @@ Corrected code:"""
         print(f"Generating test cases using {len(self.models)} model(s): {', '.join(self.models)}")
 
         final_filepaths = []
+        model_results = {}
 
         for model in self.models:
             print(f"\n{'='*60}")
@@ -792,6 +795,7 @@ Corrected code:"""
             test_cases = self.generate_test_cases(problem, model)
             if not test_cases:
                 print(f"❌ Failed to generate test cases for model {model}")
+                model_results[model] = {"status": "generation_failed", "filepath": None}
                 continue
 
             filepath = self.save_test_cases(problem, test_cases, output_dir, model)
@@ -807,8 +811,12 @@ Corrected code:"""
                 )
                 if evaluation_success:
                     print(f"🎉 Test generation and evaluation completed successfully for {model}!")
+                    model_results[model] = {"status": "success", "filepath": filepath, "coverage": code_coverage}
                 else:
                     print(f"⚠️  Test generation completed but evaluation failed for {model}")
+                    model_results[model] = {"status": "evaluation_failed", "filepath": filepath, "coverage": code_coverage}
+            else:
+                model_results[model] = {"status": "generated_no_eval", "filepath": filepath}
 
             # Update final stats after complete process and get final filepath
             final_filepath = self.update_final_stats(
@@ -817,7 +825,58 @@ Corrected code:"""
             
             final_filepaths.append(final_filepath)
 
+        # Print summary of model results
+        self._print_model_summary(model_results)
+        
         return final_filepaths
+    
+    def _print_model_summary(self, model_results: Dict[str, Dict[str, Any]]) -> None:
+        """Print a summary of results for all models."""
+        print(f"\n{'='*60}")
+        print(f"MODEL PROCESSING SUMMARY")
+        print(f"{'='*60}")
+        
+        successful_models = []
+        failed_generation = []
+        failed_evaluation = []
+        no_eval_models = []
+        
+        for model, result in model_results.items():
+            status = result["status"]
+            if status == "success":
+                coverage = result.get("coverage", 0)
+                successful_models.append(f"{model} (Coverage: {coverage:.1f}%)")
+            elif status == "generation_failed":
+                failed_generation.append(model)
+            elif status == "evaluation_failed":
+                coverage = result.get("coverage", 0)
+                failed_evaluation.append(f"{model} (Coverage: {coverage:.1f}%)")
+            elif status == "generated_no_eval":
+                no_eval_models.append(model)
+        
+        if successful_models:
+            print(f"✅ Successfully completed ({len(successful_models)}):")
+            for model in successful_models:
+                print(f"   • {model}")
+        
+        if no_eval_models:
+            print(f"📝 Generated without evaluation ({len(no_eval_models)}):")
+            for model in no_eval_models:
+                print(f"   • {model}")
+        
+        if failed_evaluation:
+            print(f"⚠️  Generated but evaluation failed ({len(failed_evaluation)}):")
+            for model in failed_evaluation:
+                print(f"   • {model}")
+        
+        if failed_generation:
+            print(f"❌ Failed to generate ({len(failed_generation)}):")
+            for model in failed_generation:
+                print(f"   • {model}")
+        
+        total_attempted = len(model_results)
+        total_with_output = len([r for r in model_results.values() if r["filepath"]])
+        print(f"\n📊 Overall: {total_with_output}/{total_attempted} models produced test files")
 
     def generate_for_random_problem(self, output_dir: str = "generated_tests") -> List[str]:
         """Generate test cases for a randomly selected problem."""
@@ -862,8 +921,8 @@ def main():
     parser.add_argument(
         "--models",
         nargs="+",
-        default=["claude-3-5-sonnet-20241022"],
-        choices=["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-haiku-20240307"],
+        default=[get_default_model()],
+        choices=get_available_models(),
         help="Claude model(s) to use for test generation (can specify multiple)"
     )
     parser.add_argument(
@@ -932,43 +991,56 @@ def main():
             )
         else:
             output_files = generator.generate_for_random_problem(args.output_dir)
+        
+        # Check if any files were generated
+        if not output_files:
+            print(f"\n❌ No test cases were generated successfully for any model.")
+            return 1
 
         # Display final usage statistics
         stats = generator.get_usage_stats()
 
-        print(f"\n✅ Successfully generated test cases!")
-        print(f"📁 Output folders and files ({len(output_files)}):")
-        
-        # Group files by folder
-        folders = {}
-        for output_file in output_files:
-            folder = Path(output_file).parent.name
-            filename = Path(output_file).name
-            if folder not in folders:
-                folders[folder] = []
-            folders[folder].append(filename)
-        
-        for i, (folder, files) in enumerate(folders.items(), 1):
-            print(f"  {i}. {folder}/")
-            for file in files:
-                print(f"     └── {file}")
-        
-        print(f"\n📊 Token Usage & Cost:")
-        print(f"  Input tokens: {stats['total_input_tokens']}")
-        print(f"  Output tokens: {stats['total_output_tokens']}")
-        print(f"  Total tokens: {stats['total_tokens']}")
-        print(f"  Total cost: ${stats['total_cost_usd']}")
-        print(f"\nTo run the tests:")
-        if len(folders) == 1:
-            folder_name = list(folders.keys())[0]
-            print(f"  cd {folder_name}")
-            print(f"  pytest . -v --cov")
+        if output_files:
+            print(f"\n✅ Generated test files!")
+            print(f"📁 Output folders and files ({len(output_files)}):")
+            
+            # Group files by folder
+            folders = {}
+            for output_file in output_files:
+                folder = Path(output_file).parent.name
+                filename = Path(output_file).name
+                if folder not in folders:
+                    folders[folder] = []
+                folders[folder].append(filename)
+            
+            for i, (folder, files) in enumerate(folders.items(), 1):
+                print(f"  {i}. {folder}/")
+                for file in files:
+                    print(f"     └── {file}")
+            
+            print(f"\n📊 Token Usage & Cost:")
+            print(f"  Input tokens: {stats['total_input_tokens']}")
+            print(f"  Output tokens: {stats['total_output_tokens']}")
+            print(f"  Total tokens: {stats['total_tokens']}")
+            print(f"  Total cost: ${stats['total_cost_usd']}")
+            print(f"\nTo run the tests:")
+            if len(folders) == 1:
+                folder_name = list(folders.keys())[0]
+                print(f"  cd {folder_name}")
+                print(f"  pytest . -v --cov")
+            else:
+                print(f"  # Run tests from specific model folder:")
+                for folder in folders.keys():
+                    print(f"  cd {folder} && pytest . -v --cov")
+                print(f"  # Or run all tests from parent directory:")
+                print(f"  pytest generated_tests_*/ -v --cov")
         else:
-            print(f"  # Run tests from specific model folder:")
-            for folder in folders.keys():
-                print(f"  cd {folder} && pytest . -v --cov")
-            print(f"  # Or run all tests from parent directory:")
-            print(f"  pytest generated_tests_*/ -v --cov")
+            print(f"\n❌ No test files were generated successfully.")
+            print(f"📊 Token Usage & Cost:")
+            print(f"  Input tokens: {stats['total_input_tokens']}")
+            print(f"  Output tokens: {stats['total_output_tokens']}")
+            print(f"  Total tokens: {stats['total_tokens']}")
+            print(f"  Total cost: ${stats['total_cost_usd']}")
 
         return 0
 
