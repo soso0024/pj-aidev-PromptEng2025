@@ -9,7 +9,7 @@
       }
     },
     "claude-3-5-haiku-20241022": {
-      "api_name": "claude-3-5-haiku-20241022", 
+      "api_name": "claude-3-5-haiku-20241022",
       "folder_name": "claude-3-5-haiku",
       "pricing": {
         "input_per_1k": 0.00025,
