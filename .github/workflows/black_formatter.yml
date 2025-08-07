@@ -1,8 +1,10 @@
 name: black-action
 
 on:
-  push:
   pull_request:
+    types: [opened, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
   workflow_dispatch:
 
 jobs:
