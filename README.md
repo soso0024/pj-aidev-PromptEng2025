@@ -53,6 +53,11 @@ export ANTHROPIC_API_KEY="your-api-key-here"
 python run_test_case_generator.py --api-key "your-api-key-here"
 ```
 
+```bash
+# AST-focused error fixing mode (adds relevant AST snippet)
+python run_test_case_generator.py --ast-fix
+```
+
 ## Usage
 
 ### Basic Usage
@@ -85,8 +90,9 @@ python run_batch_test_case_generator.py --start 0 --end 10
 | `--include-ast`        | Include AST of canonical solution in prompt                   | `False`                      |
 | `--show-prompt`        | Display prompt before sending to LLM and ask for confirmation | `False`                      |
 | `--disable-evaluation` | Disable automatic test evaluation and error fixing            | `False` (evaluation enabled) |
-| `--max-fix-attempts`   | Maximum number of attempts to fix test errors                 | `3`                          |
+| `--max-pytest-runs`    | Total pytest runs (initial + fixes)                           | `3`                          |
 | `--quiet-evaluation`   | Disable verbose output during error fixing process            | `False` (verbose enabled)    |
+| `--ast-fix`            | Enable AST-focused error fixing (adds relevant AST snippet to fix prompts) | `False`                      |
 
 ### Examples
 
@@ -114,6 +120,12 @@ python run_test_case_generator.py --include-docstring
 python run_test_case_generator.py --include-ast
 ```
 
+#### Enable AST-focused error fixing (uses relevant AST snippet during retries):
+
+```bash
+python run_test_case_generator.py --ast-fix
+```
+
 #### Preview prompt before sending to LLM:
 
 ```bash
@@ -132,6 +144,12 @@ python run_test_case_generator.py --dataset path/to/custom.jsonl --output-dir my
 python run_test_case_generator.py --task-id "HumanEval/5" --include-docstring --include-ast --show-prompt --output-dir custom_tests
 ```
 
+#### Combine with AST-focused error fixing:
+
+```bash
+python run_test_case_generator.py --task-id "HumanEval/5" --include-ast --ast-fix
+```
+
 ### Evaluation and Error Fixing
 
 The tool automatically evaluates generated test cases and fixes errors using an intelligent feedback loop:
@@ -147,8 +165,15 @@ This will:
 1. Generate initial test cases
 2. Run `pytest test_humaneval_0.py --cov -v` automatically
 3. If tests fail, analyze errors and send them to LLM for fixing
-4. Repeat up to 3 times until tests pass
+4. Repeat up to the configured maximum attempts until tests pass
 5. Show transparent debugging information throughout
+
+Fix attempt semantics (important):
+
+- The CLI option `--max-fix-attempts N` controls total pytest runs N.
+- The number of LLM fix attempts is `N - 1` (since the first run is the initial, unfixed attempt).
+- For example, with `--max-fix-attempts 3`, there are 2 fix attempts: Fix attempt 1 of 2, Fix attempt 2 of 2.
+- The UI and prompts now explicitly display “Fix attempt X of Y”.
 
 #### Control evaluation behavior:
 
@@ -156,8 +181,8 @@ This will:
 # Disable evaluation (original behavior)
 python run_test_case_generator.py --task-id "HumanEval/0" --disable-evaluation
 
-# Set maximum fix attempts
-python run_test_case_generator.py --task-id "HumanEval/0" --max-fix-attempts 5
+# Set total pytest runs (initial + fixes)
+python run_test_case_generator.py --task-id "HumanEval/0" --max-pytest-runs 5
 
 # Quiet mode (less verbose output during fixing)
 python run_test_case_generator.py --task-id "HumanEval/0" --quiet-evaluation
@@ -230,12 +255,15 @@ The tool automatically adjusts filenames based on options used and evaluation re
 - Default: `test_humaneval_0.py` → `test_humaneval_0_success.py` (if tests pass)
 - With docstring: `test_humaneval_0_docstring.py` → `test_humaneval_0_docstring_false.py` (if tests fail)
 - With AST: `test_humaneval_0_ast.py` → `test_humaneval_0_ast_success.py` (if tests pass)
+- With AST-focused fixing: `test_humaneval_0_ast-fix.py` → `test_humaneval_0_ast-fix_success.py` (if tests pass)
 - With both: `test_humaneval_0_docstring_ast.py` → `test_humaneval_0_docstring_ast_success.py` (if tests pass)
 
 **Automatic Status Suffixes:**
 
 - `_success`: Tests passed during evaluation
 - `_false`: Tests failed during evaluation (even after fix attempts)
+
+Note: When multiple options are combined, the filename includes all active tags, e.g. `test_humaneval_5_docstring_ast_ast-fix.py`.
 
 ### Example Output Structure
 
