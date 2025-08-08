@@ -1,10 +1,6 @@
 name: PR Agent
 
 on:
-  # push:
-  #   branches:
-  #     - "dev*"
-  #     - "test*"
   pull_request:
     types: [opened, reopened, ready_for_review]
   issue_comment:
