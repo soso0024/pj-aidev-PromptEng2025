@@ -170,9 +170,9 @@ This will:
 
 Fix attempt semantics (important):
 
-- The CLI option `--max-fix-attempts N` controls total pytest runs N.
+- The CLI option `--max-pytest-runs N` controls total pytest runs N.
 - The number of LLM fix attempts is `N - 1` (since the first run is the initial, unfixed attempt).
-- For example, with `--max-fix-attempts 3`, there are 2 fix attempts: Fix attempt 1 of 2, Fix attempt 2 of 2.
+- For example, with `--max-pytest-runs 3`, there are 2 fix attempts: Fix attempt 1 of 2, Fix attempt 2 of 2.
 - The UI and prompts now explicitly display “Fix attempt X of Y”.
 
 #### Control evaluation behavior:
@@ -526,7 +526,7 @@ Each `.stats.json` file contains:
   "evaluation_enabled": true,
   "evaluation_success": true,
   "fix_attempts_used": 3,
-  "max_fix_attempts": 3,
+  "max_pytest_runs": 3,
   "code_coverage_percent": 85.7
 }
 ```
@@ -536,7 +536,7 @@ Each `.stats.json` file contains:
 - `evaluation_enabled`: Whether automatic evaluation was used
 - `evaluation_success`: Whether tests finally passed after fixing
 - `fix_attempts_used`: Number of fix attempts actually used
-- `max_fix_attempts`: Maximum attempts that were configured
+- `max_pytest_runs`: Maximum pytest runs that were configured
 - `code_coverage_percent`: Final code coverage percentage from pytest --cov
 - `generated_file`: Final filename (includes success/failure suffix)
 - `total_cost_usd`: Now includes costs from all fix attempts, not just initial generation
@@ -574,7 +574,7 @@ Each `.stats.json` file contains:
 
    - The tool now includes automatic error fixing with evaluation
    - Improved prompt instructions for proper quote escaping
-   - If issues persist, try `--disable-evaluation` or `--max-fix-attempts 1`
+   - If issues persist, try `--disable-evaluation` or `--max-pytest-runs 1`
 
 7. **Evaluation fails or times out**
 
@@ -586,7 +586,7 @@ Each `.stats.json` file contains:
 8. **Fix attempts exceed maximum**
    - Some complex errors may require manual intervention
    - Check the final error output for specific issues
-   - Try increasing `--max-fix-attempts` or use `--disable-evaluation`
+   - Try increasing `--max-pytest-runs` or use `--disable-evaluation`
    - Consider using different generation options (`--include-docstring`, `--include-ast`)
 
 ### Getting Help

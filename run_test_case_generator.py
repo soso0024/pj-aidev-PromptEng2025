@@ -28,7 +28,7 @@ class TestCaseGenerator:
         include_ast: bool = False,
         show_prompt: bool = False,
         enable_evaluation: bool = True,
-        max_fix_attempts: int = 3,
+        max_pytest_runs: int = 3,
         verbose_evaluation: bool = True,
         config_path: str = "models_config.json",
         ast_fix: bool = False,
@@ -61,7 +61,7 @@ class TestCaseGenerator:
         self.include_ast = include_ast
         self.show_prompt = show_prompt
         self.enable_evaluation = enable_evaluation
-        self.max_fix_attempts = max_fix_attempts
+        self.max_pytest_runs = max_pytest_runs
         self.verbose_evaluation = verbose_evaluation
         self.total_input_tokens = 0
         self.total_output_tokens = 0
@@ -220,34 +220,69 @@ class TestCaseGenerator:
                         break
 
             # Error keyword → node predicate mapping
+            # Use more specific error patterns for better accuracy
             predicates = []
             low = error_output.lower()
-            if "zerodivisionerror" in low or "division by zero" in low:
+            
+            # Division errors
+            if "zerodivisionerror" in low or "division by zero" in low or "divide by zero" in low:
                 predicates.append(lambda n: isinstance(n, ast.BinOp) and isinstance(n.op, (ast.Div, ast.Mod, ast.FloorDiv)))
-            if "indexerror" in low or "list index out of range" in low:
+            
+            # Index errors
+            if "indexerror" in low or "list index out of range" in low or "string index out of range" in low or "tuple index out of range" in low:
                 predicates.append(lambda n: isinstance(n, ast.Subscript))
+            
+            # Key errors (dict/mapping access)
             if "keyerror" in low:
                 predicates.append(lambda n: isinstance(n, ast.Subscript))
-            if "attributeerror" in low:
+            
+            # Attribute errors
+            if "attributeerror" in low or "has no attribute" in low:
                 predicates.append(lambda n: isinstance(n, ast.Attribute))
-            if "typeerror" in low and "operand" in low:
+            
+            # Type errors with operators
+            if "typeerror" in low and ("operand" in low or "not supported between" in low):
                 predicates.append(lambda n: isinstance(n, ast.BinOp))
+            
+            # Type errors with calls
+            if "typeerror" in low and ("takes" in low or "required" in low or "argument" in low):
+                predicates.append(lambda n: isinstance(n, ast.Call))
+            
+            # Value errors
             if "valueerror" in low:
                 predicates.append(lambda n: isinstance(n, ast.Raise) or isinstance(n, ast.Call))
+            
+            # Recursion errors
             if "recursionerror" in low and entry_point:
                 predicates.append(lambda n: isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == entry_point)
+            
+            # Name errors
+            if "nameerror" in low or "is not defined" in low:
+                predicates.append(lambda n: isinstance(n, ast.Name))
+            
+            # Import errors
+            if "importerror" in low or "modulenotfounderror" in low:
+                predicates.append(lambda n: isinstance(n, (ast.Import, ast.ImportFrom)))
 
-            selected: List[ast.AST] = []
+            # Collect nodes with priority scoring
+            node_scores: List[tuple[ast.AST, int]] = []
+            
             for node in ast.walk(tree):
                 lineno = getattr(node, "lineno", None)
                 end_lineno = getattr(node, "end_lineno", lineno)
+                
+                # Check if node overlaps with error lines
                 overlaps = False
                 if lineno is not None:
                     for cl in candidate_lines:
                         if lineno <= cl <= (end_lineno or lineno):
                             overlaps = True
                             break
+                
+                # Check if node matches error-specific predicates
                 matches = any(pred(node) for pred in predicates) if predicates else False
+                
+                # Define interesting node types
                 interesting = isinstance(
                     node,
                     (
@@ -270,10 +305,29 @@ class TestCaseGenerator:
                         ast.DictComp,
                         ast.SetComp,
                         ast.GeneratorExp,
+                        ast.Lambda,
+                        ast.Name,
                     ),
                 )
-                if interesting and (overlaps or matches):
-                    selected.append(node)
+                
+                if interesting:
+                    # Calculate priority score
+                    score = 0
+                    if matches:
+                        score += 10  # High priority for error-specific matches
+                    if overlaps:
+                        score += 5   # Medium priority for line overlaps
+                    
+                    # Additional scoring based on node type relevance
+                    if isinstance(node, (ast.Call, ast.BinOp, ast.Subscript, ast.Attribute)):
+                        score += 2  # Common error sources
+                    
+                    if score > 0:
+                        node_scores.append((node, score))
+            
+            # Sort by score (highest first) and select top nodes
+            node_scores.sort(key=lambda x: x[1], reverse=True)
+            selected = [node for node, _ in node_scores[:20]]  # Limit to 20 most relevant nodes
 
             if not selected:
                 # Fallback: first few body statements for some structure
@@ -281,13 +335,37 @@ class TestCaseGenerator:
                 if func_def and func_def.body:
                     selected.extend(func_def.body[:3])
 
+            # Generate concise AST representations
             parts: List[str] = []
-            for n in selected[:20]:
+            seen_nodes = set()  # Avoid duplicate nodes
+            
+            for n in selected:
+                # Create a unique identifier for the node to avoid duplicates
+                node_id = (type(n).__name__, getattr(n, 'lineno', None), getattr(n, 'col_offset', None))
+                if node_id in seen_nodes:
+                    continue
+                seen_nodes.add(node_id)
+                
                 try:
-                    parts.append(ast.dump(n, indent=2))
+                    # Create a more concise representation
+                    node_info = f"Line {getattr(n, 'lineno', '?')}: {type(n).__name__}"
+                    
+                    # Add relevant details based on node type
+                    if isinstance(n, ast.BinOp):
+                        node_info += f" ({type(n.op).__name__})"
+                    elif isinstance(n, ast.Call) and isinstance(n.func, ast.Name):
+                        node_info += f" ({n.func.id})"
+                    elif isinstance(n, ast.Attribute):
+                        node_info += f" (.{n.attr})"
+                    elif isinstance(n, ast.Name):
+                        node_info += f" ({n.id})"
+                    
+                    # Add the full AST dump
+                    parts.append(f"{node_info}\n{ast.dump(n, indent=2)}")
                 except Exception:
-                    parts.append(type(n).__name__)
-            return "\n\n".join(parts) if parts else "(no relevant AST nodes found)"
+                    parts.append(f"Line {getattr(n, 'lineno', '?')}: {type(n).__name__}")
+            
+            return "\n\n".join(parts[:15]) if parts else "(no relevant AST nodes found)"
         except Exception as e:
             return f"Error generating relevant AST snippet: {e}"
 
@@ -500,7 +578,7 @@ Start your response with "import pytest" and include only executable Python test
                 "evaluation_enabled": self.enable_evaluation,
                 "evaluation_success": evaluation_success,
                 "fix_attempts_used": fix_attempts_used,
-                "max_fix_attempts": self.max_fix_attempts,
+                "max_pytest_runs": self.max_pytest_runs,
                 "code_coverage_percent": code_coverage,
             }
         )
@@ -569,7 +647,7 @@ Start your response with "import pytest" and include only executable Python test
             return
 
         print(f"\n{'='*80}")
-        total_fix_attempts = max(1, self.max_fix_attempts - 1)
+        total_fix_attempts = max(1, self.max_pytest_runs - 1)
         print(f"🤖 LLM FIX PROMPT - Fix attempt {attempt} of {total_fix_attempts}")
         print(f"{'='*80}")
         print(prompt)
@@ -602,7 +680,7 @@ Start your response with "import pytest" and include only executable Python test
             return
 
         print(f"\n{'='*80}")
-        total_fix_attempts = max(1, self.max_fix_attempts - 1)
+        total_fix_attempts = max(1, self.max_pytest_runs - 1)
         print(f"🔧 LLM FIX RESPONSE - Fix attempt {attempt} of {total_fix_attempts}")
         print(f"{'='*80}")
 
@@ -757,9 +835,9 @@ Start your response with "import pytest" and include only executable Python test
             ast_section = f"\n\nRELEVANT AST SNIPPET OF FUNCTION (focus on error):\n```\n{ast_snippet}\n```\n"
 
         # Distinguish between pytest attempts and fix attempts for clarity in the prompt
-        # A fix prompt is only shown when attempt < self.max_fix_attempts, so fix attempt index == attempt
-        # Total fix attempts available == self.max_fix_attempts - 1
-        total_fix_attempts = max(1, self.max_fix_attempts - 1)
+        # A fix prompt is only shown when attempt < self.max_pytest_runs, so fix attempt index == attempt
+        # Total fix attempts available == self.max_pytest_runs - 1
+        total_fix_attempts = max(1, self.max_pytest_runs - 1)
         fix_attempt_line = f"This is fix attempt {attempt} of {total_fix_attempts}."
 
         return f"""The following test code has errors when running pytest. Please fix the issues and return ONLY the corrected Python code, no explanations or markdown.
@@ -868,7 +946,7 @@ Corrected code:"""
 
         final_coverage = 0.0
 
-        for attempt in range(1, self.max_fix_attempts + 1):
+        for attempt in range(1, self.max_pytest_runs + 1):
             # Run pytest
             success, error_output, coverage = self.run_pytest(test_file_path)
             final_coverage = coverage
@@ -884,7 +962,7 @@ Corrected code:"""
             # Display detailed error information
             self.display_pytest_errors(error_output, attempt)
 
-            if attempt < self.max_fix_attempts:
+            if attempt < self.max_pytest_runs:
                 print(f"🔧 Attempting to fix errors...")
 
                 # Read current test file content
@@ -927,12 +1005,12 @@ Corrected code:"""
 
                 print(f"📝 Updated test file with fixes")
             else:
-                total_fix_attempts = max(0, self.max_fix_attempts - 1)
+                total_fix_attempts = max(0, self.max_pytest_runs - 1)
                 print(f"🚫 Maximum fix attempts ({total_fix_attempts}) reached")
                 print("Final error output:")
                 print(error_output)
 
-        return False, self.max_fix_attempts, final_coverage
+        return False, self.max_pytest_runs, final_coverage
 
     def _generate_and_evaluate_test_cases(
         self, problem: Dict[str, Any], output_dir: str = "generated_tests"
@@ -1124,10 +1202,10 @@ def main():
         help="Disable automatic evaluation and fixing of generated tests",
     )
     parser.add_argument(
-        "--max-fix-attempts",
+        "--max-pytest-runs",
         type=int,
         default=3,
-        help="Maximum number of attempts to fix test errors (default: 3)",
+        help="Maximum number of pytest runs (initial + fixes) (default: 3)",
     )
     parser.add_argument(
         "--quiet-evaluation",
@@ -1160,7 +1238,7 @@ def main():
             include_ast=args.include_ast,
             show_prompt=args.show_prompt,
             enable_evaluation=not args.disable_evaluation,
-            max_fix_attempts=args.max_fix_attempts,
+            max_pytest_runs=args.max_pytest_runs,
             verbose_evaluation=not args.quiet_evaluation,
             ast_fix=args.ast_fix,
         )
