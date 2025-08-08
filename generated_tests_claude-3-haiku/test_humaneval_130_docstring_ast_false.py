@@ -1,0 +1,76 @@
+# Test cases for HumanEval/130
+# Generated using Claude API
+
+
+def tri(n):
+    """Everyone knows Fibonacci sequence, it was studied deeply by mathematicians in 
+    the last couple centuries. However, what people don't know is Tribonacci sequence.
+    Tribonacci sequence is defined by the recurrence:
+    tri(1) = 3
+    tri(n) = 1 + n / 2, if n is even.
+    tri(n) =  tri(n - 1) + tri(n - 2) + tri(n + 1), if n is odd.
+    For example:
+    tri(2) = 1 + (2 / 2) = 2
+    tri(4) = 3
+    tri(3) = tri(2) + tri(1) + tri(4)
+           = 2 + 3 + 3 = 8 
+    You are given a non-negative integer number n, you have to a return a list of the 
+    first n + 1 numbers of the Tribonacci sequence.
+    Examples:
+    tri(3) = [1, 3, 2, 8]
+    """
+
+    if n == 0:
+        return [1]
+    my_tri = [1, 3]
+    for i in range(2, n + 1):
+        if i % 2 == 0:
+            my_tri.append(i / 2 + 1)
+        else:
+            my_tri.append(my_tri[i - 1] + my_tri[i - 2] + (i + 3) / 2)
+    return my_tri
+
+
+# Generated test cases:
+import pytest
+
+def tri(n):
+    if n == 0:
+        return [1]
+    my_tri = [1, 3]
+    for i in range(2, n + 1):
+        if i % 2 == 0:
+            my_tri.append(1 + i // 2)
+        else:
+            my_tri.append(my_tri[i - 1] + my_tri[i - 2] + (i + 3) // 2)
+    return my_tri
+
+def test_tri_zero():
+    assert tri(0) == [1]
+
+def test_tri_one():
+    assert tri(1) == [1, 3]
+
+def test_tri_even():
+    assert tri(2) == [1, 3, 2]
+    assert tri(4) == [1, 3, 2, 8]
+
+def test_tri_odd():
+    assert tri(3) == [1, 3, 2, 8]
+    assert tri(5) == [1, 3, 2, 8, 6]
+
+@pytest.mark.parametrize("n,expected", [
+    (0, [1]),
+    (1, [1, 3]),
+    (2, [1, 3, 2]),
+    (3, [1, 3, 2, 8]),
+    (4, [1, 3, 2, 8]),
+    (5, [1, 3, 2, 8, 6]),
+    (10, [1, 3, 2, 8, 6, 9, 7, 10, 8, 11, 12])
+])
+def test_tri_parametrized(n, expected):
+    assert tri(n) == expected
+
+def test_tri_negative():
+    with pytest.raises(ValueError):
+        tri(-1)

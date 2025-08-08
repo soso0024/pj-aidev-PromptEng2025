@@ -1,0 +1,13 @@
+{
+  "total_input_tokens": 2882,
+  "total_output_tokens": 635,
+  "total_tokens": 3517,
+  "total_cost_usd": 0.001514,
+  "task_id": "HumanEval/24",
+  "generated_file": "generated_tests_claude-3-haiku/test_humaneval_24_ast_success.py",
+  "evaluation_enabled": true,
+  "evaluation_success": true,
+  "fix_attempts_used": 1,
+  "max_fix_attempts": 3,
+  "code_coverage_percent": 88.0
+}
