@@ -1,0 +1,58 @@
+# Test cases for HumanEval/58
+# Generated using Claude API
+
+
+
+def common(l1: list, l2: list):
+    """Return sorted unique common elements for two lists.
+    >>> common([1, 4, 3, 34, 653, 2, 5], [5, 7, 1, 5, 9, 653, 121])
+    [1, 5, 653]
+    >>> common([5, 3, 2, 8], [3, 2])
+    [2, 3]
+
+    """
+
+    ret = set()
+    for e1 in l1:
+        for e2 in l2:
+            if e1 == e2:
+                ret.add(e1)
+    return sorted(list(ret))
+
+
+# Generated test cases:
+import pytest
+
+def common(l1: list, l2: list):
+    ret = set()
+    for e1 in l1:
+        for e2 in l2:
+            if e1 == e2:
+                ret.add(e1)
+    return sorted(list(ret), key=lambda x: (isinstance(x, str), x))
+
+def test_common_normal_case():
+    assert common([1, 4, 3, 34, 653, 2, 5], [5, 7, 1, 5, 9, 653, 121]) == [1, 5, 653]
+    assert common([5, 3, 2, 8], [3, 2]) == [2, 3]
+
+def test_common_empty_lists():
+    assert common([], []) == []
+    assert common([1, 2, 3], []) == []
+    assert common([], [4, 5, 6]) == []
+
+def test_common_no_overlap():
+    assert common([1, 2, 3], [4, 5, 6]) == []
+
+def test_common_duplicate_elements():
+    assert common([1, 1, 2, 2, 3], [1, 2, 2, 3, 3]) == [1, 2, 3]
+
+def test_common_different_types():
+    assert common([1, 'a', 2], ['a', 3, 1]) == [1, 'a']
+
+@pytest.mark.parametrize("list1,list2,expected", [
+    ([1, 2, 3], [3, 2, 1], [1, 2, 3]),
+    (['a', 'b', 'c'], ['c', 'b', 'a'], ['a', 'b', 'c']),
+    ([1.1, 2.2, 3.3], [3.3, 2.2, 1.1], [1.1, 2.2, 3.3])
+])
+def test_common_parametrized(list1, list2, expected):
+    assert common(list1, list2) == expected

@@ -1,0 +1,13 @@
+{
+  "total_input_tokens": 4669,
+  "total_output_tokens": 1462,
+  "total_tokens": 6131,
+  "total_cost_usd": 0.002995,
+  "task_id": "HumanEval/115",
+  "generated_file": "generated_tests_claude-3-5-haiku/test_humaneval_115_false.py",
+  "evaluation_enabled": true,
+  "evaluation_success": false,
+  "fix_attempts_used": 3,
+  "max_fix_attempts": 3,
+  "code_coverage_percent": 92.0
+}
