@@ -569,7 +569,8 @@ Start your response with "import pytest" and include only executable Python test
             return
 
         print(f"\n{'='*80}")
-        print(f"🤖 LLM FIX PROMPT - Attempt {attempt}")
+        total_fix_attempts = max(1, self.max_fix_attempts - 1)
+        print(f"🤖 LLM FIX PROMPT - Fix attempt {attempt} of {total_fix_attempts}")
         print(f"{'='*80}")
         print(prompt)
         print(f"{'='*80}")
@@ -601,7 +602,8 @@ Start your response with "import pytest" and include only executable Python test
             return
 
         print(f"\n{'='*80}")
-        print(f"🔧 LLM FIX RESPONSE - Attempt {attempt}")
+        total_fix_attempts = max(1, self.max_fix_attempts - 1)
+        print(f"🔧 LLM FIX RESPONSE - Fix attempt {attempt} of {total_fix_attempts}")
         print(f"{'='*80}")
 
         # Show first few lines and last few lines of the response
@@ -754,6 +756,12 @@ Start your response with "import pytest" and include only executable Python test
         if self.ast_fix and ast_snippet:
             ast_section = f"\n\nRELEVANT AST SNIPPET OF FUNCTION (focus on error):\n```\n{ast_snippet}\n```\n"
 
+        # Distinguish between pytest attempts and fix attempts for clarity in the prompt
+        # A fix prompt is only shown when attempt < self.max_fix_attempts, so fix attempt index == attempt
+        # Total fix attempts available == self.max_fix_attempts - 1
+        total_fix_attempts = max(1, self.max_fix_attempts - 1)
+        fix_attempt_line = f"This is fix attempt {attempt} of {total_fix_attempts}."
+
         return f"""The following test code has errors when running pytest. Please fix the issues and return ONLY the corrected Python code, no explanations or markdown.
 
 FUNCTION BEING TESTED (WHITE BOX):
@@ -772,7 +780,7 @@ PYTEST ERROR OUTPUT:
 {error_output}
 ```
 
-This is attempt {attempt} of {self.max_fix_attempts}.
+ {fix_attempt_line}
 {ast_section}
 
 Requirements:
@@ -919,7 +927,8 @@ Corrected code:"""
 
                 print(f"📝 Updated test file with fixes")
             else:
-                print(f"🚫 Maximum fix attempts ({self.max_fix_attempts}) reached")
+                total_fix_attempts = max(0, self.max_fix_attempts - 1)
+                print(f"🚫 Maximum fix attempts ({total_fix_attempts}) reached")
                 print("Final error output:")
                 print(error_output)
 
