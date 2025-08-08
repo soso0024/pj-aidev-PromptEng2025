@@ -13,7 +13,7 @@ import re
 import ast
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Tuple, Optional
 import anthropic
 from dotenv import load_dotenv
 from model_utils import get_available_models, get_default_model
@@ -31,6 +31,7 @@ class TestCaseGenerator:
         max_fix_attempts: int = 3,
         verbose_evaluation: bool = True,
         config_path: str = "models_config.json",
+        ast_fix: bool = False,
     ):
         """Initialize the test case generator with Claude API client."""
         self.client = anthropic.Anthropic(api_key=api_key)
@@ -65,6 +66,8 @@ class TestCaseGenerator:
         self.total_input_tokens = 0
         self.total_output_tokens = 0
         self.total_cost = 0.0
+        # Whether to include a focused AST snippet in error-fix prompts
+        self.ast_fix = ast_fix
 
     def _load_model_config(self, config_path: str) -> Dict[str, Any]:
         """Load model configuration from JSON file."""
@@ -171,6 +174,122 @@ class TestCaseGenerator:
             return ast.dump(tree, indent=2)
         except Exception as e:
             return f"Error generating AST: {e}"
+
+    def generate_relevant_ast_snippet(
+        self, problem: Dict[str, Any], error_output: str
+    ) -> str:
+        """Generate a compact AST snippet focusing on nodes related to the error.
+
+        Heuristics:
+        - Match error output lines to lines in the canonical implementation and include
+          nodes whose line ranges overlap.
+        - Include nodes associated with common Python error types found in the output.
+        """
+        try:
+            entry_point = problem.get("entry_point", "")
+            # Build function text (signature + body)
+            signature = self.extract_function_signature(problem.get("prompt", ""), entry_point)
+            if not signature:
+                # Fallback minimal signature
+                if entry_point:
+                    signature = f"def {entry_point}(*args, **kwargs):"
+                else:
+                    signature = "def _func(*args, **kwargs):"
+            if not signature.endswith(":"):
+                signature += ":"
+            full_function = f"{signature}\n{problem.get('canonical_solution', '')}"
+
+            tree = ast.parse(full_function)
+            full_lines = full_function.splitlines()
+
+            # Candidate line numbers from error output lines that appear in the function text
+            candidate_lines: List[int] = []
+            for raw in error_output.split("\n"):
+                ln = raw.strip()
+                if not ln:
+                    continue
+                if ln.startswith("STDOUT:") or ln.startswith("STDERR:"):
+                    continue
+                if ln.startswith("=== ") or ln.startswith("FAILED ") or ln.startswith("PASSED "):
+                    continue
+                for idx, fl in enumerate(full_lines, start=1):
+                    if not fl:
+                        continue
+                    if ln == fl.strip() or (ln.lstrip() == fl.lstrip() and len(ln.split()) >= 2):
+                        candidate_lines.append(idx)
+                        break
+
+            # Error keyword → node predicate mapping
+            predicates = []
+            low = error_output.lower()
+            if "zerodivisionerror" in low or "division by zero" in low:
+                predicates.append(lambda n: isinstance(n, ast.BinOp) and isinstance(n.op, (ast.Div, ast.Mod, ast.FloorDiv)))
+            if "indexerror" in low or "list index out of range" in low:
+                predicates.append(lambda n: isinstance(n, ast.Subscript))
+            if "keyerror" in low:
+                predicates.append(lambda n: isinstance(n, ast.Subscript))
+            if "attributeerror" in low:
+                predicates.append(lambda n: isinstance(n, ast.Attribute))
+            if "typeerror" in low and "operand" in low:
+                predicates.append(lambda n: isinstance(n, ast.BinOp))
+            if "valueerror" in low:
+                predicates.append(lambda n: isinstance(n, ast.Raise) or isinstance(n, ast.Call))
+            if "recursionerror" in low and entry_point:
+                predicates.append(lambda n: isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == entry_point)
+
+            selected: List[ast.AST] = []
+            for node in ast.walk(tree):
+                lineno = getattr(node, "lineno", None)
+                end_lineno = getattr(node, "end_lineno", lineno)
+                overlaps = False
+                if lineno is not None:
+                    for cl in candidate_lines:
+                        if lineno <= cl <= (end_lineno or lineno):
+                            overlaps = True
+                            break
+                matches = any(pred(node) for pred in predicates) if predicates else False
+                interesting = isinstance(
+                    node,
+                    (
+                        ast.If,
+                        ast.For,
+                        ast.While,
+                        ast.With,
+                        ast.Try,
+                        ast.Assign,
+                        ast.AugAssign,
+                        ast.Return,
+                        ast.Raise,
+                        ast.Call,
+                        ast.BinOp,
+                        ast.BoolOp,
+                        ast.Compare,
+                        ast.Subscript,
+                        ast.Attribute,
+                        ast.ListComp,
+                        ast.DictComp,
+                        ast.SetComp,
+                        ast.GeneratorExp,
+                    ),
+                )
+                if interesting and (overlaps or matches):
+                    selected.append(node)
+
+            if not selected:
+                # Fallback: first few body statements for some structure
+                func_def = next((n for n in tree.body if isinstance(n, ast.FunctionDef)), None)
+                if func_def and func_def.body:
+                    selected.extend(func_def.body[:3])
+
+            parts: List[str] = []
+            for n in selected[:20]:
+                try:
+                    parts.append(ast.dump(n, indent=2))
+                except Exception:
+                    parts.append(type(n).__name__)
+            return "\n\n".join(parts) if parts else "(no relevant AST nodes found)"
+        except Exception as e:
+            return f"Error generating relevant AST snippet: {e}"
 
     def generate_prompt(self, problem: Dict[str, Any]) -> str:
         """Create a prompt for Claude to generate test cases."""
@@ -551,6 +670,8 @@ Start your response with "import pytest" and include only executable Python test
             filename_parts.append("docstring")
         if self.include_ast:
             filename_parts.append("ast")
+        if getattr(self, "ast_fix", False):
+            filename_parts.append("ast-fix")
 
         filename = f"{'_'.join(filename_parts)}.py"
         filepath = output_path / filename
@@ -626,8 +747,13 @@ Start your response with "import pytest" and include only executable Python test
         error_output: str,
         attempt: int,
         problem: Dict[str, Any],
+        ast_snippet: Optional[str] = None,
     ) -> str:
         """Generate a prompt to fix test case errors with white box testing approach."""
+        ast_section = ""
+        if self.ast_fix and ast_snippet:
+            ast_section = f"\n\nRELEVANT AST SNIPPET OF FUNCTION (focus on error):\n```\n{ast_snippet}\n```\n"
+
         return f"""The following test code has errors when running pytest. Please fix the issues and return ONLY the corrected Python code, no explanations or markdown.
 
 FUNCTION BEING TESTED (WHITE BOX):
@@ -647,6 +773,7 @@ PYTEST ERROR OUTPUT:
 ```
 
 This is attempt {attempt} of {self.max_fix_attempts}.
+{ast_section}
 
 Requirements:
 - Return ONLY executable Python code that can be run directly
@@ -670,7 +797,13 @@ Corrected code:"""
         model: str,
     ) -> str:
         """Use LLM to fix test case errors."""
-        fix_prompt = self.generate_fix_prompt(test_code, error_output, attempt, problem)
+        ast_snippet: Optional[str] = None
+        if self.ast_fix:
+            ast_snippet = self.generate_relevant_ast_snippet(problem, error_output)
+
+        fix_prompt = self.generate_fix_prompt(
+            test_code, error_output, attempt, problem, ast_snippet
+        )
 
         # Display the fix prompt if verbose mode is enabled
         should_proceed = self.display_fix_prompt(fix_prompt, attempt)
@@ -992,6 +1125,11 @@ def main():
         action="store_true",
         help="Disable verbose output during error fixing process",
     )
+    parser.add_argument(
+        "--ast-fix",
+        action="store_true",
+        help="Enable AST-focused error fixing (adds relevant AST snippet to LLM fix prompts)",
+    )
 
     args = parser.parse_args()
 
@@ -1015,6 +1153,7 @@ def main():
             enable_evaluation=not args.disable_evaluation,
             max_fix_attempts=args.max_fix_attempts,
             verbose_evaluation=not args.quiet_evaluation,
+            ast_fix=args.ast_fix,
         )
 
         # Load dataset
