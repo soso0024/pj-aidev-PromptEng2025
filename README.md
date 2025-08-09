@@ -80,18 +80,18 @@ python run_batch_test_case_generator.py --start 0 --end 10
 
 ### Command Line Options
 
-| Option                 | Description                                                                | Default                      |
-| ---------------------- | -------------------------------------------------------------------------- | ---------------------------- |
-| `--dataset`            | Path to HumanEval dataset file                                             | `dataset/HumanEval.jsonl`    |
-| `--output-dir`         | Output directory for test files                                            | `generated_tests`            |
-| `--task-id`            | Specific task ID to generate tests for                                     | Random selection             |
-| `--api-key`            | Claude API key                                                             | From .env or environment     |
-| `--include-docstring`  | Include function docstring in prompt                                       | `False` (signature only)     |
-| `--include-ast`        | Include AST of canonical solution in prompt                                | `False`                      |
-| `--show-prompt`        | Display prompt before sending to LLM and ask for confirmation              | `False`                      |
-| `--disable-evaluation` | Disable automatic test evaluation and error fixing                         | `False` (evaluation enabled) |
-| `--max-pytest-runs`    | Total pytest runs (initial + fixes)                                        | `3`                          |
-| `--quiet-evaluation`   | Disable verbose output during error fixing process                         | `False` (verbose enabled)    |
+| Option                 | Description                                                                                                  | Default                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------- |
+| `--dataset`            | Path to HumanEval dataset file                                                                               | `dataset/HumanEval.jsonl`    |
+| `--output-dir`         | Output directory for test files                                                                              | `generated_tests`            |
+| `--task-id`            | Specific task ID to generate tests for                                                                       | Random selection             |
+| `--api-key`            | Claude API key                                                                                               | From .env or environment     |
+| `--include-docstring`  | Include function docstring in prompt                                                                         | `False` (signature only)     |
+| `--include-ast`        | Include AST of canonical solution in prompt                                                                  | `False`                      |
+| `--show-prompt`        | Display prompt before sending to LLM and ask for confirmation                                                | `False`                      |
+| `--disable-evaluation` | Disable automatic test evaluation and error fixing                                                           | `False` (evaluation enabled) |
+| `--max-pytest-runs`    | Total pytest runs (initial + fixes)                                                                          | `3`                          |
+| `--quiet-evaluation`   | Disable verbose output during error fixing process                                                           | `False` (verbose enabled)    |
 | `--ast-fix`            | Enable AST-focused error fixing - adds relevant AST nodes to fix prompts for better structural understanding | `False`                      |
 
 ### Examples
@@ -305,6 +305,7 @@ This focused AST snippet helps the LLM understand:
 When `--ast-fix` is enabled and a test fails, the system enhances the fix prompt sent to the LLM:
 
 1. **Standard Fix Prompt Components**:
+
    - The original function being tested (white box approach)
    - The current test code with errors
    - The pytest error output
@@ -316,20 +317,19 @@ When `--ast-fix` is enabled and a test fails, the system enhances the fix prompt
    - The AST is presented in a readable format with line numbers
 
 **Example Fix Prompt Structure**:
+
 ```
 FUNCTION BEING TESTED (WHITE BOX):
 def divide(a, b):
     return a / b
 
 RELEVANT AST SNIPPET OF FUNCTION (focus on error):
-```
 Line 2: BinOp (Div)
 BinOp(
   left=Name(id='a', ctx=Load()),
   op=Div(),
   right=Name(id='b', ctx=Load())
 )
-```
 
 CURRENT TEST CODE WITH ERRORS:
 [test code here]
@@ -341,6 +341,7 @@ This is fix attempt 1 of 2.
 ```
 
 The LLM receives this enhanced context and can better understand:
+
 - The structure of the code that's causing the error
 - The specific operation types involved (e.g., division, indexing)
 - The relationship between variables and operations
@@ -351,17 +352,20 @@ This structural information helps the LLM generate more accurate fixes by unders
 #### Comparison: Regular vs AST-Based Error Fixing
 
 **Without `--ast-fix`** (Regular fixing):
+
 - LLM sees: function code + test code + error message
 - Must infer the problem from error text alone
 - May miss structural issues or edge cases
 
 **With `--ast-fix`** (AST-enhanced fixing):
+
 - LLM sees: function code + **relevant AST nodes** + test code + error message
 - Gets explicit structural information about error-prone operations
 - Can identify patterns like division operations, list indexing, attribute access
 - Better understanding leads to more comprehensive test fixes
 
 For example, with a `ZeroDivisionError`:
+
 - Regular: LLM sees "division by zero" error
 - AST-enhanced: LLM also sees the `BinOp(op=Div())` node, understanding it's specifically a division operation between variables `a` and `b`
 
@@ -378,12 +382,14 @@ python run_test_case_generator.py --task-id "HumanEval/0" --include-ast --ast-fi
 #### When to Use `--ast-fix`
 
 Consider enabling `--ast-fix` when:
+
 - Working with complex algorithms that have multiple error-prone operations
 - Dealing with functions that handle edge cases (division by zero, empty lists, null checks)
 - Test generation fails repeatedly with type errors or runtime exceptions
 - You want more thorough test coverage of error conditions
 
 The option is particularly effective for problems involving:
+
 - Mathematical operations (division, modulo)
 - List/array operations (indexing, slicing)
 - Dictionary operations (key access)
