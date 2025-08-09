@@ -13,7 +13,7 @@ import re
 import ast
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Any, Tuple, Optional
+from typing import Any, Optional
 import anthropic
 from dotenv import load_dotenv
 from model_utils import get_available_models, get_default_model
@@ -189,6 +189,95 @@ class TestCaseGenerator:
         except Exception as e:
             return f"Error generating AST: {e}"
 
+    # --- Helper methods to keep generate_relevant_ast_snippet maintainable ---
+    def _normalize_line(self, s: str) -> str:
+        return re.sub(r"\s+", " ", s.strip())
+
+    def _build_normalized_index(self, full_lines: list[str]) -> dict[str, list[int]]:
+        index: dict[str, list[int]] = {}
+        for idx, fl in enumerate(full_lines, start=1):
+            nf = self._normalize_line(fl)
+            if not nf:
+                continue
+            index.setdefault(nf, []).append(idx)
+        return index
+
+    def _parse_error_output_for_lines(
+        self, error_output: str, full_lines: list[str], normalized_index: dict[str, list[int]]
+    ) -> set[int]:
+        candidate_set: set[int] = set()
+        for raw in error_output.split("\n"):
+            ln = raw.strip()
+            if not ln:
+                continue
+            if ln.startswith("STDOUT:") or ln.startswith("STDERR:"):
+                continue
+            if (
+                ln.startswith("=== ")
+                or ln.startswith("FAILED ")
+                or ln.startswith("PASSED ")
+                or ln.startswith("Traceback")
+            ):
+                continue
+
+            # explicit line numbers, e.g., "line 12"
+            for m in re.finditer(r"\bline\s+(\d+)\b", ln):
+                try:
+                    num = int(m.group(1))
+                    if 1 <= num <= len(full_lines):
+                        candidate_set.add(num)
+                except ValueError:
+                    pass
+
+            # pytest excerpt line starting with '>'
+            if raw.lstrip().startswith('>'):
+                excerpt = raw.lstrip().lstrip('>')
+                nf = self._normalize_line(excerpt)
+                if nf in normalized_index:
+                    candidate_set.update(normalized_index[nf])
+                continue
+
+            # general normalized content match
+            nf = self._normalize_line(ln)
+            if nf and len(nf.split()) >= 2 and nf in normalized_index:
+                candidate_set.update(normalized_index[nf])
+
+            # lines prefixed with 'E '
+            if ln.startswith('E '):
+                ln_after = ln[1:].strip()
+                if ln_after:
+                    nf2 = self._normalize_line(ln_after)
+                    if nf2 and len(nf2.split()) >= 2 and nf2 in normalized_index:
+                        candidate_set.update(normalized_index[nf2])
+
+        return candidate_set
+
+    def _expand_candidate_lines(
+        self,
+        tree: ast.AST,
+        full_lines: list[str],
+        candidate_set: set[int],
+        node_span_cap: int = 20,
+    ) -> list[int]:
+        expanded: set[int] = set(candidate_set)
+        for cl in list(candidate_set):
+            if cl - 1 >= 1:
+                expanded.add(cl - 1)
+            if cl + 1 <= len(full_lines):
+                expanded.add(cl + 1)
+
+        for node in ast.walk(tree):
+            lineno = getattr(node, "lineno", None)
+            end_lineno = getattr(node, "end_lineno", lineno)
+            if lineno is None or end_lineno is None:
+                continue
+            overlaps_any = any(lineno <= cl <= end_lineno for cl in candidate_set)
+            if overlaps_any and (end_lineno - lineno + 1) <= node_span_cap:
+                for ln_i in range(lineno, end_lineno + 1):
+                    if 1 <= ln_i <= len(full_lines):
+                        expanded.add(ln_i)
+        return sorted(expanded)
+
     def generate_relevant_ast_snippet(
         self, problem: dict[str, Any], error_output: str
     ) -> str:
@@ -218,91 +307,14 @@ class TestCaseGenerator:
             tree = ast.parse(full_function)
             full_lines = full_function.splitlines()
 
-            # Candidate line numbers from error output lines that appear in the function text
-            # Build a normalized index for efficient matching
-            def _normalize_line(s: str) -> str:
-                return re.sub(r"\s+", " ", s.strip())
-
-            normalized_to_indices: dict[str, list[int]] = {}
-            for idx, fl in enumerate(full_lines, start=1):
-                nf = _normalize_line(fl)
-                if not nf:
-                    continue
-                normalized_to_indices.setdefault(nf, []).append(idx)
-
-            candidate_set: set[int] = set()
-            error_lines = error_output.split("\n")
-
-            for raw in error_lines:
-                ln = raw.strip()
-                if not ln:
-                    continue
-                if ln.startswith("STDOUT:") or ln.startswith("STDERR:"):
-                    continue
-                if (
-                    ln.startswith("=== ")
-                    or ln.startswith("FAILED ")
-                    or ln.startswith("PASSED ")
-                    or ln.startswith("Traceback")
-                ):
-                    continue
-
-                # Extract explicit line numbers from tracebacks like "line 12"
-                for m in re.finditer(r"\bline\s+(\d+)\b", ln):
-                    try:
-                        num = int(m.group(1))
-                        if 1 <= num <= len(full_lines):
-                            candidate_set.add(num)
-                    except ValueError:
-                        pass
-
-                # Handle pytest code excerpt lines that begin with '>'
-                if raw.lstrip().startswith('>'):
-                    excerpt = raw.lstrip().lstrip('>')
-                    nf = _normalize_line(excerpt)
-                    if nf in normalized_to_indices:
-                        for idx in normalized_to_indices[nf]:
-                            candidate_set.add(idx)
-                    continue
-
-                # General normalized content match (requires at least two tokens)
-                nf = _normalize_line(ln)
-                if nf and len(nf.split()) >= 2 and nf in normalized_to_indices:
-                    for idx in normalized_to_indices[nf]:
-                        candidate_set.add(idx)
-
-                # Lines prefixed with pytest error marker 'E ' may still contain code fragments
-                if ln.startswith('E '):
-                    ln_after = ln[1:].strip()
-                    if ln_after:
-                        nf2 = _normalize_line(ln_after)
-                        if nf2 and len(nf2.split()) >= 2 and nf2 in normalized_to_indices:
-                            for idx in normalized_to_indices[nf2]:
-                                candidate_set.add(idx)
-
-            # Expand candidates by including: (a) small fixed context, (b) AST node span context
-            expanded_candidates: set[int] = set(candidate_set)
-            for cl in list(candidate_set):
-                if cl - 1 >= 1:
-                    expanded_candidates.add(cl - 1)
-                if cl + 1 <= len(full_lines):
-                    expanded_candidates.add(cl + 1)
-
-            # Use AST node boundaries to expand context dynamically around matched lines
-            NODE_SPAN_CAP = 20  # avoid ballooning on very large nodes
-            for node in ast.walk(tree):
-                lineno = getattr(node, "lineno", None)
-                end_lineno = getattr(node, "end_lineno", lineno)
-                if lineno is None or end_lineno is None:
-                    continue
-                # If this node's span overlaps any candidate line, include its span (within cap)
-                overlaps_any = any(lineno <= cl <= end_lineno for cl in candidate_set)
-                if overlaps_any and (end_lineno - lineno + 1) <= NODE_SPAN_CAP:
-                    for ln_i in range(lineno, end_lineno + 1):
-                        if 1 <= ln_i <= len(full_lines):
-                            expanded_candidates.add(ln_i)
-
-            candidate_lines: list[int] = sorted(expanded_candidates)
+            # Candidate lines from error output
+            normalized_to_indices = self._build_normalized_index(full_lines)
+            candidate_set = self._parse_error_output_for_lines(
+                error_output, full_lines, normalized_to_indices
+            )
+            candidate_lines: list[int] = self._expand_candidate_lines(
+                tree, full_lines, candidate_set
+            )
 
             # Error keyword → node predicate mapping
             # Use more specific error patterns for better accuracy
