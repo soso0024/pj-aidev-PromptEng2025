@@ -1206,15 +1206,17 @@ class TestASTOperations:
         
         problem = {
             "entry_point": "divide",
-            "prompt": "def divide(a, b):\n    return a / b",
-            "canonical_solution": "return a / b"  # Remove indentation since it will be added
+            "prompt": "def divide(a, b):",
+            "canonical_solution": "    return a / b"
         }
         error_output = "ZeroDivisionError: division by zero\n    return a / b"
         
         result = generator.generate_relevant_ast_snippet(problem, error_output)
         
-        # Should contain BinOp with Div operation or error message
-        assert ("BinOp" in result and "Div" in result) or "Error generating" in result
+        # Should not fail and should contain BinOp with Div operation
+        assert "Error generating" not in result
+        assert "BinOp" in result
+        assert "Div" in result
         assert "(no relevant AST nodes found)" not in result
 
     def test_generate_relevant_ast_snippet_indexerror(self, mocker):
@@ -1415,8 +1417,9 @@ class TestASTOperations:
         
         result = generator.generate_relevant_ast_snippet(problem, error_output)
         
-        # Should still generate some AST output
-        assert "Error generating relevant AST snippet:" in result or "Return" in result
+        # Should not fail and should fall back to generating some AST output
+        assert "Error generating relevant AST snippet:" not in result
+        assert "Return" in result
 
     def test_generate_relevant_ast_snippet_max_nodes_limit(self, mocker):
         """Test that AST snippet respects the 20-node limit."""

@@ -72,7 +72,7 @@ class BatchTestGenerator:
             self.dataset,
             "--output-dir",
             str(self.output_dir),
-            "--max-fix-attempts",
+            "--max-pytest-runs",
             str(self.max_pytest_runs),
             "--models",
         ]

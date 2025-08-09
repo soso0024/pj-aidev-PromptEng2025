@@ -19,6 +19,20 @@ from dotenv import load_dotenv
 from model_utils import get_available_models, get_default_model
 
 
+# Constants for maintainability
+MAX_AST_NODES = 20  # Maximum number of AST nodes to include in snippet
+MAX_AST_OUTPUT_NODES = 15  # Maximum nodes to output in final result
+AST_SCORE_ERROR_MATCH = 10  # Score for nodes matching error patterns
+AST_SCORE_LINE_OVERLAP = 5  # Score for nodes overlapping with error lines
+AST_SCORE_COMMON_ERROR = 2  # Score for common error-prone operations
+PYTEST_TIMEOUT_SECONDS = 60  # Timeout for pytest execution
+DEFAULT_MAX_TOKENS = 2000  # Max tokens for LLM response
+DEFAULT_TEMPERATURE = 0.0  # Temperature for deterministic responses
+DISPLAY_LINE_LIMIT = 20  # Max lines to display without truncation
+TRUNCATE_HEAD_LINES = 10  # Lines to show at start when truncating
+TRUNCATE_TAIL_LINES = 10  # Lines to show at end when truncating
+
+
 class TestCaseGenerator:
     def __init__(
         self,
@@ -346,15 +360,15 @@ class TestCaseGenerator:
                     # Calculate priority score
                     score = 0
                     if matches:
-                        score += 10  # High priority for error-specific matches
+                        score += AST_SCORE_ERROR_MATCH  # High priority for error-specific matches
                     if overlaps:
-                        score += 5  # Medium priority for line overlaps
+                        score += AST_SCORE_LINE_OVERLAP  # Medium priority for line overlaps
 
                     # Additional scoring based on node type relevance
                     if isinstance(
                         node, (ast.Call, ast.BinOp, ast.Subscript, ast.Attribute)
                     ):
-                        score += 2  # Common error sources
+                        score += AST_SCORE_COMMON_ERROR  # Common error sources
 
                     if score > 0:
                         node_scores.append((node, score))
@@ -362,8 +376,8 @@ class TestCaseGenerator:
             # Sort by score (highest first) and select top nodes
             node_scores.sort(key=lambda x: x[1], reverse=True)
             selected = [
-                node for node, _ in node_scores[:20]
-            ]  # Limit to 20 most relevant nodes
+                node for node, _ in node_scores[:MAX_AST_NODES]
+            ]  # Limit to most relevant nodes
 
             if not selected:
                 # Fallback: first few body statements for some structure
@@ -409,7 +423,7 @@ class TestCaseGenerator:
                         f"Line {getattr(n, 'lineno', '?')}: {type(n).__name__}"
                     )
 
-            return "\n\n".join(parts[:15]) if parts else "(no relevant AST nodes found)"
+            return "\n\n".join(parts[:MAX_AST_OUTPUT_NODES]) if parts else "(no relevant AST nodes found)"
         except Exception as e:
             return f"Error generating relevant AST snippet: {e}"
 
@@ -558,6 +572,10 @@ Start your response with "import pytest" and include only executable Python test
         output_cost = (output_tokens / 1000) * pricing["output_per_1k"]
         return input_cost + output_cost
 
+    def get_total_fix_attempts(self) -> int:
+        """Get the total number of fix attempts available."""
+        return max(1, self.max_pytest_runs - 1)
+    
     def get_usage_stats(self) -> Dict[str, Any]:
         """Get current usage statistics."""
         return {
@@ -691,7 +709,7 @@ Start your response with "import pytest" and include only executable Python test
             return
 
         print(f"\n{'='*80}")
-        total_fix_attempts = max(1, self.max_pytest_runs - 1)
+        total_fix_attempts = self.get_total_fix_attempts()
         print(f"🤖 LLM FIX PROMPT - Fix attempt {attempt} of {total_fix_attempts}")
         print(f"{'='*80}")
         print(prompt)
@@ -724,18 +742,18 @@ Start your response with "import pytest" and include only executable Python test
             return
 
         print(f"\n{'='*80}")
-        total_fix_attempts = max(1, self.max_pytest_runs - 1)
+        total_fix_attempts = self.get_total_fix_attempts()
         print(f"🔧 LLM FIX RESPONSE - Fix attempt {attempt} of {total_fix_attempts}")
         print(f"{'='*80}")
 
         # Show first few lines and last few lines of the response
         lines = response.split("\n")
-        if len(lines) <= 20:
+        if len(lines) <= DISPLAY_LINE_LIMIT:
             print(response)
         else:
-            print("\n".join(lines[:10]))
-            print(f"\n... ({len(lines) - 20} lines omitted) ...\n")
-            print("\n".join(lines[-10:]))
+            print("\n".join(lines[:TRUNCATE_HEAD_LINES]))
+            print(f"\n... ({len(lines) - DISPLAY_LINE_LIMIT} lines omitted) ...\n")
+            print("\n".join(lines[-TRUNCATE_TAIL_LINES:]))
 
         print(f"{'='*80}\n")
 
@@ -753,8 +771,8 @@ Start your response with "import pytest" and include only executable Python test
         try:
             response = self.client.messages.create(
                 model=self.model_mapping[model],
-                max_tokens=2000,
-                temperature=0.0,  # A temperature of 0.0 results in the most deterministic and consistent responses, as the model will consistently choose the most probable words and sequences.
+                max_tokens=DEFAULT_MAX_TOKENS,
+                temperature=DEFAULT_TEMPERATURE,  # A temperature of 0.0 results in the most deterministic and consistent responses, as the model will consistently choose the most probable words and sequences.
                 messages=[{"role": "user", "content": prompt}],
             )
 
@@ -840,7 +858,7 @@ Start your response with "import pytest" and include only executable Python test
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=60,  # 60 second timeout
+                timeout=PYTEST_TIMEOUT_SECONDS,
                 cwd=Path.cwd(),  # Run from current working directory
             )
 
@@ -861,7 +879,7 @@ Start your response with "import pytest" and include only executable Python test
             return success, output, coverage_percentage
 
         except subprocess.TimeoutExpired:
-            return False, "Error: pytest execution timed out after 60 seconds", 0.0
+            return False, f"Error: pytest execution timed out after {PYTEST_TIMEOUT_SECONDS} seconds", 0.0
         except Exception as e:
             return False, f"Error running pytest: {str(e)}", 0.0
 
@@ -880,8 +898,7 @@ Start your response with "import pytest" and include only executable Python test
 
         # Distinguish between pytest attempts and fix attempts for clarity in the prompt
         # A fix prompt is only shown when attempt < self.max_pytest_runs, so fix attempt index == attempt
-        # Total fix attempts available == self.max_pytest_runs - 1
-        total_fix_attempts = max(1, self.max_pytest_runs - 1)
+        total_fix_attempts = self.get_total_fix_attempts()
         fix_attempt_line = f"This is fix attempt {attempt} of {total_fix_attempts}."
 
         return f"""The following test code has errors when running pytest. Please fix the issues and return ONLY the corrected Python code, no explanations or markdown.
@@ -1049,7 +1066,7 @@ Corrected code:"""
 
                 print(f"📝 Updated test file with fixes")
             else:
-                total_fix_attempts = max(0, self.max_pytest_runs - 1)
+                total_fix_attempts = max(0, self.get_total_fix_attempts())
                 print(f"🚫 Maximum fix attempts ({total_fix_attempts}) reached")
                 print("Final error output:")
                 print(error_output)
