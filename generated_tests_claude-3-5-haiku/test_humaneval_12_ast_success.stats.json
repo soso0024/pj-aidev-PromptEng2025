@@ -8,6 +8,6 @@
   "evaluation_enabled": true,
   "evaluation_success": true,
   "fix_attempts_used": 0,
-  "max_fix_attempts": 3,
+  "max_pytest_runs": 3,
   "code_coverage_percent": 86.0
 }
