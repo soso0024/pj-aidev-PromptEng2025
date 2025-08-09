@@ -34,6 +34,7 @@ class AnalysisReporter:
         """Generate all analysis reports."""
         print("Generating analysis reports...")
         self.print_summary_stats()
+        self.print_ast_fix_analysis()
         print("\nAnalysis reports completed!")
 
     def print_summary_stats(self) -> None:
@@ -86,6 +87,59 @@ class AnalysisReporter:
 
         # Add dataset-aware analysis
         self.print_dataset_analysis()
+
+    def print_ast_fix_analysis(self) -> None:
+        """Print analysis comparing runs with and without ast-fix option.
+
+        Robust to missing optional columns like fix_attempts_used, total_cost_usd,
+        and code_coverage_percent.
+        """
+        if "has_ast_fix" not in self.df.columns or "success" not in self.df.columns:
+            return
+
+        print("\n" + "=" * 80)
+        print("AST-FIX ANALYSIS")
+        print("=" * 80)
+
+        # Build aggregation dict based on available columns
+        agg_dict = {
+            "success_rate": ("success", "mean"),
+            "samples": ("success", "count"),
+        }
+        if "fix_attempts_used" in self.df.columns:
+            agg_dict["avg_fix_attempts"] = ("fix_attempts_used", "mean")
+        if "total_cost_usd" in self.df.columns:
+            agg_dict["avg_cost_usd"] = ("total_cost_usd", "mean")
+        if "code_coverage_percent" in self.df.columns:
+            agg_dict["avg_coverage"] = ("code_coverage_percent", "mean")
+
+        grouped = (
+            self.df.groupby(["has_ast_fix", "config_type"], observed=False)
+            .agg(**agg_dict)
+            .reset_index()
+        )
+
+        if grouped.empty:
+            print("No data available for ast-fix analysis.")
+            return
+
+        # Pretty print
+        for has_ast_fix in [False, True]:
+            subset = grouped[grouped["has_ast_fix"] == has_ast_fix]
+            label = "WITH ast-fix" if has_ast_fix else "WITHOUT ast-fix"
+            print(f"\n{label}:")
+            for _, row in subset.iterrows():
+                fields = [
+                    f"success={row['success_rate']*100:.1f}% (n={int(row['samples'])})",
+                ]
+                if "avg_fix_attempts" in row.index:
+                    fields.append(f"fix_attempts={row['avg_fix_attempts']:.2f}")
+                if "avg_cost_usd" in row.index:
+                    fields.append(f"cost=${row['avg_cost_usd']:.4f}")
+                if "avg_coverage" in row.index:
+                    fields.append(f"coverage={row['avg_coverage']:.1f}%")
+
+                print(f"  {row['config_type']}: " + ", ".join(fields))
 
     def print_dataset_analysis(self) -> None:
         """Print dataset-aware analysis including complexity and algorithm type breakdown."""

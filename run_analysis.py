@@ -38,7 +38,8 @@ class TestResultsAnalyzer:
         self.dataset_path = dataset_path
 
         # Define the desired order for configuration types
-        self.config_order = ["basic", "ast", "docstring", "docstring_ast"]
+        # Include new ast-fix configuration bucket
+        self.config_order = ["basic", "ast", "docstring", "docstring_ast", "ast-fix"]
 
         # Define consistent algorithm type ordering
         self.algorithm_type_order = [
@@ -144,6 +145,10 @@ class TestResultsAnalyzer:
             config = record.get("config_type", "unknown")
             config_counts[config] = config_counts.get(config, 0) + 1
 
+        # AST-fix usage summary (new metric)
+        ast_fix_true = sum(r.get("has_ast_fix", False) for r in self.data)
+        ast_fix_false = len(self.data) - ast_fix_true
+
         return {
             "total_records": len(self.data),
             "configurations": config_counts,
@@ -153,6 +158,7 @@ class TestResultsAnalyzer:
             "has_algorithm_types": any(
                 "algorithm_type" in record for record in self.data
             ),
+            "ast_fix_counts": {"true": ast_fix_true, "false": ast_fix_false},
         }
 
 
@@ -211,6 +217,11 @@ def main():
         f"  Dataset classification: {'✅' if summary['has_dataset_classification'] else '❌'}"
     )
     print(f"  Algorithm types: {'✅' if summary['has_algorithm_types'] else '❌'}")
+    if 'ast_fix_counts' in summary:
+        true_cnt = summary['ast_fix_counts']['true']
+        total = max(1, summary['total_records'])
+        pct = (true_cnt / total) * 100
+        print(f"  AST-fix records: {true_cnt} ({pct:.1f}%)")
 
     if summary["total_records"] == 0:
         print(
