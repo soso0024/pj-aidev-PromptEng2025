@@ -146,7 +146,7 @@ class TestResultsAnalyzer:
             config_counts[config] = config_counts.get(config, 0) + 1
 
         # AST-fix usage summary (new metric)
-        ast_fix_true = sum(1 for r in self.data if r.get("has_ast_fix", False))
+        ast_fix_true = sum(r.get("has_ast_fix", False) for r in self.data)
         ast_fix_false = len(self.data) - ast_fix_true
 
         return {
