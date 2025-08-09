@@ -27,7 +27,7 @@ class DataLoader:
         self.data = []
         self.classifier = ProblemClassifier(dataset_path)
         # Define the desired order for configuration types
-        self.config_order = ["basic", "ast", "docstring", "docstring_ast"]
+        self.config_order = ["basic", "ast", "docstring", "docstring_ast", "ast-fix"]
 
     def parse_filename(self, filename: str) -> Dict[str, Any]:
         """Parse configuration information from filename.
@@ -59,7 +59,10 @@ class DataLoader:
         is_false = base_name.endswith("_false")
 
         # Determine configuration type
-        if has_docstring and has_ast:
+        if has_ast_fix:
+            # Treat ast-fix as its own configuration bucket
+            config_type = "ast-fix"
+        elif has_docstring and has_ast:
             config_type = "docstring_ast"
         elif has_docstring:
             config_type = "docstring"
