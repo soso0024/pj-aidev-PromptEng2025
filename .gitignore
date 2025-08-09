@@ -21,3 +21,6 @@ wheels/
 htmlcov/
 
 CLAUDE.md
+
+# Workflows
+.github/workflows/black_formatter.yml
