@@ -219,8 +219,21 @@ class TestCaseGenerator:
             full_lines = full_function.splitlines()
 
             # Candidate line numbers from error output lines that appear in the function text
-            candidate_lines: List[int] = []
-            for raw in error_output.split("\n"):
+            # Build a normalized index for efficient matching
+            def _normalize_line(s: str) -> str:
+                return re.sub(r"\s+", " ", s.strip())
+
+            normalized_to_indices: Dict[str, List[int]] = {}
+            for idx, fl in enumerate(full_lines, start=1):
+                nf = _normalize_line(fl)
+                if not nf:
+                    continue
+                normalized_to_indices.setdefault(nf, []).append(idx)
+
+            candidate_set: set[int] = set()
+            error_lines = error_output.split("\n")
+
+            for raw in error_lines:
                 ln = raw.strip()
                 if not ln:
                     continue
@@ -230,16 +243,44 @@ class TestCaseGenerator:
                     ln.startswith("=== ")
                     or ln.startswith("FAILED ")
                     or ln.startswith("PASSED ")
+                    or ln.startswith("E ")
+                    or ln.startswith("Traceback")
                 ):
                     continue
-                for idx, fl in enumerate(full_lines, start=1):
-                    if not fl:
-                        continue
-                    if ln == fl.strip() or (
-                        ln.lstrip() == fl.lstrip() and len(ln.split()) >= 2
-                    ):
-                        candidate_lines.append(idx)
-                        break
+
+                # Extract explicit line numbers from tracebacks like "line 12"
+                for m in re.finditer(r"\bline\s+(\d+)\b", ln):
+                    try:
+                        num = int(m.group(1))
+                        if 1 <= num <= len(full_lines):
+                            candidate_set.add(num)
+                    except ValueError:
+                        pass
+
+                # Handle pytest code excerpt lines that begin with '>'
+                if raw.lstrip().startswith('>'):
+                    excerpt = raw.lstrip().lstrip('>')
+                    nf = _normalize_line(excerpt)
+                    if nf in normalized_to_indices:
+                        for idx in normalized_to_indices[nf]:
+                            candidate_set.add(idx)
+                    continue
+
+                # General normalized content match (requires at least two tokens)
+                nf = _normalize_line(ln)
+                if nf and len(nf.split()) >= 2 and nf in normalized_to_indices:
+                    for idx in normalized_to_indices[nf]:
+                        candidate_set.add(idx)
+
+            # Expand candidates by including small context around matched lines
+            expanded_candidates: set[int] = set(candidate_set)
+            for cl in list(candidate_set):
+                if cl - 1 >= 1:
+                    expanded_candidates.add(cl - 1)
+                if cl + 1 <= len(full_lines):
+                    expanded_candidates.add(cl + 1)
+
+            candidate_lines: List[int] = sorted(expanded_candidates)
 
             # Error keyword → node predicate mapping
             # Use more specific error patterns for better accuracy
@@ -309,7 +350,7 @@ class TestCaseGenerator:
                 predicates.append(lambda n: isinstance(n, (ast.Import, ast.ImportFrom)))
 
             # Collect nodes with priority scoring
-            node_scores: List[tuple[ast.AST, int]] = []
+            node_scores: List[Tuple[ast.AST, int]] = []
 
             for node in ast.walk(tree):
                 lineno = getattr(node, "lineno", None)
@@ -908,6 +949,7 @@ FUNCTION BEING TESTED (WHITE BOX):
 {problem['prompt']}
 {problem['canonical_solution']}
 ```
+{ast_section}
 
 CURRENT TEST CODE WITH ERRORS:
 ```python
@@ -920,7 +962,6 @@ PYTEST ERROR OUTPUT:
 ```
 
  {fix_attempt_line}
-{ast_section}
 
 Requirements:
 - Return ONLY executable Python code that can be run directly
