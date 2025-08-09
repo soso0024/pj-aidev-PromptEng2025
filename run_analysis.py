@@ -38,7 +38,8 @@ class TestResultsAnalyzer:
         self.dataset_path = dataset_path
 
         # Define the desired order for configuration types
-        self.config_order = ["basic", "ast", "docstring", "docstring_ast"]
+        # Include new ast-fix configuration bucket
+        self.config_order = ["basic", "ast", "docstring", "docstring_ast", "ast-fix"]
 
         # Define consistent algorithm type ordering
         self.algorithm_type_order = [
