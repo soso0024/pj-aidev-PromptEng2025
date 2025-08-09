@@ -243,7 +243,6 @@ class TestCaseGenerator:
                     ln.startswith("=== ")
                     or ln.startswith("FAILED ")
                     or ln.startswith("PASSED ")
-                    or ln.startswith("E ")
                     or ln.startswith("Traceback")
                 ):
                     continue
@@ -272,13 +271,36 @@ class TestCaseGenerator:
                     for idx in normalized_to_indices[nf]:
                         candidate_set.add(idx)
 
-            # Expand candidates by including small context around matched lines
+                # Lines prefixed with pytest error marker 'E ' may still contain code fragments
+                if ln.startswith('E '):
+                    ln_after = ln[1:].strip()
+                    if ln_after:
+                        nf2 = _normalize_line(ln_after)
+                        if nf2 and len(nf2.split()) >= 2 and nf2 in normalized_to_indices:
+                            for idx in normalized_to_indices[nf2]:
+                                candidate_set.add(idx)
+
+            # Expand candidates by including: (a) small fixed context, (b) AST node span context
             expanded_candidates: set[int] = set(candidate_set)
             for cl in list(candidate_set):
                 if cl - 1 >= 1:
                     expanded_candidates.add(cl - 1)
                 if cl + 1 <= len(full_lines):
                     expanded_candidates.add(cl + 1)
+
+            # Use AST node boundaries to expand context dynamically around matched lines
+            NODE_SPAN_CAP = 20  # avoid ballooning on very large nodes
+            for node in ast.walk(tree):
+                lineno = getattr(node, "lineno", None)
+                end_lineno = getattr(node, "end_lineno", lineno)
+                if lineno is None or end_lineno is None:
+                    continue
+                # If this node's span overlaps any candidate line, include its span (within cap)
+                overlaps_any = any(lineno <= cl <= end_lineno for cl in candidate_set)
+                if overlaps_any and (end_lineno - lineno + 1) <= NODE_SPAN_CAP:
+                    for ln_i in range(lineno, end_lineno + 1):
+                        if 1 <= ln_i <= len(full_lines):
+                            expanded_candidates.add(ln_i)
 
             candidate_lines: List[int] = sorted(expanded_candidates)
 
