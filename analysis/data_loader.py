@@ -46,8 +46,13 @@ class DataLoader:
         problem_id = int(match.group(1))
 
         # Check for configuration flags
+        # Note: "ast-fix" is a separate option that should not be conflated with
+        # the "ast" prompt-inclusion flag. Detect it first, then detect "_ast"
+        # on a version of the name with "_ast-fix" removed.
         has_docstring = "_docstring" in base_name
-        has_ast = "_ast" in base_name
+        has_ast_fix = "_ast-fix" in base_name
+        base_name_without_ast_fix = base_name.replace("_ast-fix", "")
+        has_ast = "_ast" in base_name_without_ast_fix
 
         # Check success status
         is_success = base_name.endswith("_success")
@@ -67,6 +72,7 @@ class DataLoader:
             "problem_id": problem_id,
             "has_docstring": has_docstring,
             "has_ast": has_ast,
+            "has_ast_fix": has_ast_fix,
             "config_type": config_type,
             "success": is_success,
             "filename": filename,
