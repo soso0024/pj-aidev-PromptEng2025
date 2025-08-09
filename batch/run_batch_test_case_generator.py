@@ -30,8 +30,9 @@ class BatchTestGenerator:
         models: List[str] = None,
         include_docstring: bool = False,
         include_ast: bool = False,
+        ast_fix: bool = False,
         disable_evaluation: bool = False,
-        max_fix_attempts: int = 3,
+        max_pytest_runs: int = 3,
         quiet_evaluation: bool = False,
         task_timeout: int = 300,
         output_dir: str = "generated_tests",
@@ -43,8 +44,9 @@ class BatchTestGenerator:
         self.models = models if models else [get_default_model()]
         self.include_docstring = include_docstring
         self.include_ast = include_ast
+        self.ast_fix = ast_fix
         self.disable_evaluation = disable_evaluation
-        self.max_fix_attempts = max_fix_attempts
+        self.max_pytest_runs = max_pytest_runs
         self.quiet_evaluation = quiet_evaluation
         self.task_timeout = task_timeout
         self.output_dir = Path(output_dir)
@@ -70,8 +72,8 @@ class BatchTestGenerator:
             self.dataset,
             "--output-dir",
             str(self.output_dir),
-            "--max-fix-attempts",
-            str(self.max_fix_attempts),
+            "--max-pytest-runs",
+            str(self.max_pytest_runs),
             "--models",
         ]
 
@@ -82,6 +84,8 @@ class BatchTestGenerator:
             cmd.append("--include-docstring")
         if self.include_ast:
             cmd.append("--include-ast")
+        if self.ast_fix:
+            cmd.append("--ast-fix")
         if self.disable_evaluation:
             cmd.append("--disable-evaluation")
         if self.quiet_evaluation:
@@ -141,8 +145,9 @@ class BatchTestGenerator:
         print(f"  - Models: {', '.join(self.models)}")
         print(f"  - Include docstrings: {self.include_docstring}")
         print(f"  - Include AST: {self.include_ast}")
+        print(f"  - AST-based fixing: {self.ast_fix}")
         print(f"  - Evaluation disabled: {self.disable_evaluation}")
-        print(f"  - Max fix attempts: {self.max_fix_attempts}")
+        print(f"  - Max pytest runs: {self.max_pytest_runs}")
 
         start_time = time.time()
 
@@ -275,15 +280,20 @@ Examples:
         help="Include AST of canonical solution in prompt",
     )
     parser.add_argument(
+        "--ast-fix",
+        action="store_true",
+        help="Enable AST-focused error fixing in the retry loop",
+    )
+    parser.add_argument(
         "--disable-evaluation",
         action="store_true",
         help="Disable automatic evaluation and fixing of generated tests",
     )
     parser.add_argument(
-        "--max-fix-attempts",
+        "--max-pytest-runs",
         type=int,
         default=3,
-        help="Maximum number of attempts to fix test errors (default: 3)",
+        help="Maximum number of pytest runs (initial + fixes) (default: 3)",
     )
     parser.add_argument(
         "--quiet-evaluation",
@@ -329,8 +339,9 @@ Examples:
             models=args.models,
             include_docstring=args.include_docstring,
             include_ast=args.include_ast,
+            ast_fix=args.ast_fix,
             disable_evaluation=args.disable_evaluation,
-            max_fix_attempts=args.max_fix_attempts,
+            max_pytest_runs=args.max_pytest_runs,
             quiet_evaluation=args.quiet_evaluation,
             task_timeout=args.task_timeout,
             output_dir=args.output_dir,

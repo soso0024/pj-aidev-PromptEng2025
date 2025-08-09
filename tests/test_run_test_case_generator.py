@@ -44,7 +44,7 @@ class TestTestCaseGeneratorInitialization:
         assert generator.include_ast == False
         assert generator.show_prompt == False
         assert generator.enable_evaluation == True
-        assert generator.max_fix_attempts == 3
+        assert generator.max_pytest_runs == 3
         assert generator.verbose_evaluation == True
         mock_anthropic.assert_called_once_with(api_key="test_key")
 
@@ -137,7 +137,7 @@ class TestTestCaseGeneratorInitialization:
             include_ast=True,
             show_prompt=True,
             enable_evaluation=False,
-            max_fix_attempts=5,
+            max_pytest_runs=5,
             verbose_evaluation=False,
             config_path="custom_config.json",
         )
@@ -146,7 +146,7 @@ class TestTestCaseGeneratorInitialization:
         assert generator.include_ast == True
         assert generator.show_prompt == True
         assert generator.enable_evaluation == False
-        assert generator.max_fix_attempts == 5
+        assert generator.max_pytest_runs == 5
         assert generator.verbose_evaluation == False
 
 
@@ -970,7 +970,7 @@ class TestPytestEvaluation:
     def test_evaluate_and_fix_tests_max_attempts(self, mocker):
         """Test evaluation reaching max attempts with realistic iterative behavior."""
         generator = self.create_generator(mocker)
-        generator.max_fix_attempts = 2
+        generator.max_pytest_runs = 2
 
         # Mock run_pytest to fail twice, then succeed (but max_attempts prevents reaching success)
         mocker.patch.object(
@@ -1173,6 +1173,299 @@ E   AssertionError: assert False
 
         # Should not raise an exception
         generator._print_model_summary(model_results)
+
+
+class TestASTOperations:
+    """Test AST-related functionality."""
+
+    def create_generator(self, mocker, **kwargs):
+        """Helper to create generator with mocked dependencies."""
+        mock_config = {
+            "default_model": "claude-3-5-sonnet",
+            "models": {
+                "claude-3-5-sonnet": {
+                    "api_name": "claude-3-5-sonnet-20241022",
+                    "folder_name": "claude_35_sonnet",
+                    "pricing": {"input_per_1k": 0.003, "output_per_1k": 0.015},
+                }
+            },
+        }
+        mocker.patch("builtins.open", mock_open(read_data=json.dumps(mock_config)))
+        mocker.patch("anthropic.Anthropic")
+        
+        default_kwargs = {
+            "api_key": "test_key",
+            "ast_fix": True,
+        }
+        default_kwargs.update(kwargs)
+        return TestCaseGenerator(**default_kwargs)
+
+    def test_generate_relevant_ast_snippet_zerodivisionerror(self, mocker):
+        """Test AST snippet generation for ZeroDivisionError."""
+        generator = self.create_generator(mocker)
+        
+        problem = {
+            "entry_point": "divide",
+            "prompt": "def divide(a, b):",
+            "canonical_solution": "    return a / b"
+        }
+        error_output = "ZeroDivisionError: division by zero\n    return a / b"
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Should not fail and should contain BinOp with Div operation
+        assert "Error generating" not in result
+        assert "BinOp" in result
+        assert "Div" in result
+        assert "(no relevant AST nodes found)" not in result
+
+    def test_generate_relevant_ast_snippet_indexerror(self, mocker):
+        """Test AST snippet generation for IndexError."""
+        generator = self.create_generator(mocker)
+        
+        problem = {
+            "entry_point": "get_item",
+            "prompt": "def get_item(lst, idx):",
+            "canonical_solution": "    return lst[idx]"
+        }
+        error_output = "IndexError: list index out of range\n    return lst[idx]"
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Should contain Subscript node
+        assert "Subscript" in result
+        assert "(no relevant AST nodes found)" not in result
+
+    def test_generate_relevant_ast_snippet_attributeerror(self, mocker):
+        """Test AST snippet generation for AttributeError."""
+        generator = self.create_generator(mocker)
+        
+        problem = {
+            "entry_point": "get_attr",
+            "prompt": "def get_attr(obj):",
+            "canonical_solution": "    return obj.value"
+        }
+        error_output = "AttributeError: 'NoneType' object has no attribute 'value'\n    return obj.value"
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Should contain Attribute node
+        assert "Attribute" in result
+        assert "(no relevant AST nodes found)" not in result
+
+    def test_generate_relevant_ast_snippet_recursionerror(self, mocker):
+        """Test AST snippet generation for RecursionError."""
+        generator = self.create_generator(mocker)
+        
+        problem = {
+            "entry_point": "factorial",
+            "prompt": "def factorial(n):",
+            "canonical_solution": "    return factorial(n-1) * n"
+        }
+        error_output = "RecursionError: maximum recursion depth exceeded\n    return factorial(n-1) * n"
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Should contain Call node with function name 'factorial'
+        assert "Call" in result
+        assert "(no relevant AST nodes found)" not in result
+
+    def test_generate_relevant_ast_snippet_typeerror_operand(self, mocker):
+        """Test AST snippet generation for TypeError with operand."""
+        generator = self.create_generator(mocker)
+        
+        problem = {
+            "entry_point": "add",
+            "prompt": "def add(a, b):",
+            "canonical_solution": "    return a + b"
+        }
+        error_output = "TypeError: unsupported operand type(s) for +: 'int' and 'str'\n    return a + b"
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Should contain BinOp node
+        assert "BinOp" in result
+        assert "(no relevant AST nodes found)" not in result
+
+    def test_generate_relevant_ast_snippet_valueerror(self, mocker):
+        """Test AST snippet generation for ValueError."""
+        generator = self.create_generator(mocker)
+        
+        problem = {
+            "entry_point": "convert",
+            "prompt": "def convert(s):",
+            "canonical_solution": "    return int(s)"
+        }
+        error_output = "ValueError: invalid literal for int() with base 10: 'abc'\n    return int(s)"
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Should contain Call node (for int())
+        assert "Call" in result
+        assert "(no relevant AST nodes found)" not in result
+
+    def test_generate_relevant_ast_snippet_keyerror(self, mocker):
+        """Test AST snippet generation for KeyError."""
+        generator = self.create_generator(mocker)
+        
+        problem = {
+            "entry_point": "get_value",
+            "prompt": "def get_value(d, key):",
+            "canonical_solution": "    return d[key]"
+        }
+        error_output = "KeyError: 'missing_key'\n    return d[key]"
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Should contain Subscript node
+        assert "Subscript" in result
+        assert "(no relevant AST nodes found)" not in result
+
+    def test_generate_relevant_ast_snippet_no_matching_lines(self, mocker):
+        """Test AST snippet generation with no matching lines in error."""
+        generator = self.create_generator(mocker)
+        
+        problem = {
+            "entry_point": "func",
+            "prompt": "def func():",
+            "canonical_solution": "    x = 1\n    y = 2\n    return x + y"
+        }
+        error_output = "Some generic error without matching code lines"
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Should fallback to first few body statements
+        assert result != "(no relevant AST nodes found)"
+        # The improved logic might find other relevant nodes like BinOp
+        assert any(node_type in result for node_type in ["Assign", "Return", "BinOp", "Name"])
+
+    def test_generate_relevant_ast_snippet_complex_nodes(self, mocker):
+        """Test AST snippet generation with complex node types."""
+        generator = self.create_generator(mocker)
+        
+        problem = {
+            "entry_point": "process",
+            "prompt": "def process(items):",
+            "canonical_solution": "    result = [x*2 for x in items if x > 0]\n    return result"
+        }
+        error_output = "Error in list comprehension\n    result = [x*2 for x in items if x > 0]"
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Should contain ListComp node
+        assert "ListComp" in result or "Assign" in result
+        assert "(no relevant AST nodes found)" not in result
+
+    def test_generate_relevant_ast_snippet_multiple_errors(self, mocker):
+        """Test AST snippet with multiple error types mentioned."""
+        generator = self.create_generator(mocker)
+        
+        problem = {
+            "entry_point": "complex_func",
+            "prompt": "def complex_func(a, b):",
+            "canonical_solution": "    x = a / b\n    y = a[0]\n    return x + y"
+        }
+        error_output = "Multiple errors: ZeroDivisionError and IndexError\n    x = a / b\n    y = a[0]"
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Should contain both BinOp (for division) and Subscript (for indexing)
+        assert "BinOp" in result or "Subscript" in result
+        assert "(no relevant AST nodes found)" not in result
+
+    def test_generate_relevant_ast_snippet_parse_error(self, mocker):
+        """Test AST snippet generation when code parsing fails."""
+        generator = self.create_generator(mocker)
+        
+        problem = {
+            "entry_point": "bad_func",
+            "prompt": "def bad_func():",
+            "canonical_solution": "    invalid python syntax here {"
+        }
+        error_output = "SyntaxError: invalid syntax"
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Should return error message
+        assert "Error generating relevant AST snippet:" in result
+
+    def test_generate_relevant_ast_snippet_empty_function(self, mocker):
+        """Test AST snippet generation with empty function body."""
+        generator = self.create_generator(mocker)
+        
+        problem = {
+            "entry_point": "empty_func",
+            "prompt": "def empty_func():",
+            "canonical_solution": "    pass"
+        }
+        error_output = "Some error"
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Should handle empty/minimal functions
+        assert result != "(no relevant AST nodes found)"
+
+    def test_generate_relevant_ast_snippet_no_entry_point(self, mocker):
+        """Test AST snippet generation without entry point."""
+        generator = self.create_generator(mocker)
+        
+        problem = {
+            "prompt": "Some prompt without function name",
+            "canonical_solution": "    return 42"
+        }
+        error_output = "Error in code"
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Should not fail and should fall back to generating some AST output
+        assert "Error generating relevant AST snippet:" not in result
+        assert "Return" in result
+
+    def test_generate_relevant_ast_snippet_max_nodes_limit(self, mocker):
+        """Test that AST snippet respects the 20-node limit."""
+        generator = self.create_generator(mocker)
+        
+        # Create a large function with many statements
+        solution_lines = [f"    x{i} = {i}" for i in range(30)]
+        problem = {
+            "entry_point": "large_func",
+            "prompt": "def large_func():",
+            "canonical_solution": "\n".join(solution_lines)
+        }
+        error_output = "Error somewhere\n" + "\n".join(solution_lines[:5])
+        
+        result = generator.generate_relevant_ast_snippet(problem, error_output)
+        
+        # Count the number of AST dumps (separated by double newlines)
+        ast_dumps = result.split("\n\n")
+        assert len(ast_dumps) <= 20
+
+    def test_extract_function_signature_with_ast_fix(self, mocker):
+        """Test function signature extraction (used by AST snippet generation)."""
+        generator = self.create_generator(mocker)
+        
+        prompt = '''def hello(name: str) -> str:
+    """Say hello to someone."""
+    return f"Hello, {name}!"'''
+        
+        signature = generator.extract_function_signature(prompt, "hello")
+        assert signature == "def hello(name: str) -> str:"
+
+    def test_extract_function_signature_multiline(self, mocker):
+        """Test function signature extraction with multiline signature."""
+        generator = self.create_generator(mocker)
+        
+        prompt = '''def process_data(
+    data: List[int],
+    threshold: float = 0.5
+) -> Dict[str, Any]:
+    """Process data."""
+    return {}'''
+        
+        signature = generator.extract_function_signature(prompt, "process_data")
+        assert "def process_data(" in signature
+        # The function might not capture the full multiline signature
+        assert signature.startswith("def process_data(")
 
 
 if __name__ == "__main__":
