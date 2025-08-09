@@ -13,7 +13,7 @@ import re
 import ast
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Any, Tuple, Optional
+from typing import Any, Optional
 import anthropic
 from dotenv import load_dotenv
 from model_utils import get_available_models, get_default_model
@@ -37,7 +37,7 @@ class TestCaseGenerator:
     def __init__(
         self,
         api_key: str,
-        models: List[str] = None,
+        models: list[str] = None,
         include_docstring: bool = False,
         include_ast: bool = False,
         show_prompt: bool = False,
@@ -83,7 +83,7 @@ class TestCaseGenerator:
         # Whether to include a focused AST snippet in error-fix prompts
         self.ast_fix = ast_fix
 
-    def _load_model_config(self, config_path: str) -> Dict[str, Any]:
+    def _load_model_config(self, config_path: str) -> dict[str, Any]:
         """Load model configuration from JSON file."""
         try:
             with open(config_path, "r", encoding="utf-8") as f:
@@ -111,7 +111,7 @@ class TestCaseGenerator:
 
         print(f"Loaded {len(self.problems)} problems from dataset")
 
-    def select_random_problem(self) -> Dict[str, Any]:
+    def select_random_problem(self) -> dict[str, Any]:
         """Randomly select a problem from the dataset."""
         return random.choice(self.problems)
 
@@ -189,8 +189,97 @@ class TestCaseGenerator:
         except Exception as e:
             return f"Error generating AST: {e}"
 
+    # --- Helper methods to keep generate_relevant_ast_snippet maintainable ---
+    def _normalize_line(self, s: str) -> str:
+        return re.sub(r"\s+", " ", s.strip())
+
+    def _build_normalized_index(self, full_lines: list[str]) -> dict[str, list[int]]:
+        index: dict[str, list[int]] = {}
+        for idx, fl in enumerate(full_lines, start=1):
+            nf = self._normalize_line(fl)
+            if not nf:
+                continue
+            index.setdefault(nf, []).append(idx)
+        return index
+
+    def _parse_error_output_for_lines(
+        self, error_output: str, full_lines: list[str], normalized_index: dict[str, list[int]]
+    ) -> set[int]:
+        candidate_set: set[int] = set()
+        for raw in error_output.split("\n"):
+            ln = raw.strip()
+            if not ln:
+                continue
+            if ln.startswith("STDOUT:") or ln.startswith("STDERR:"):
+                continue
+            if (
+                ln.startswith("=== ")
+                or ln.startswith("FAILED ")
+                or ln.startswith("PASSED ")
+                or ln.startswith("Traceback")
+            ):
+                continue
+
+            # explicit line numbers, e.g., "line 12"
+            for m in re.finditer(r"\bline\s+(\d+)\b", ln):
+                try:
+                    num = int(m.group(1))
+                    if 1 <= num <= len(full_lines):
+                        candidate_set.add(num)
+                except ValueError:
+                    pass
+
+            # pytest excerpt line starting with '>'
+            if raw.lstrip().startswith('>'):
+                excerpt = raw.lstrip().lstrip('>')
+                nf = self._normalize_line(excerpt)
+                if nf in normalized_index:
+                    candidate_set.update(normalized_index[nf])
+                continue
+
+            # general normalized content match
+            nf = self._normalize_line(ln)
+            if nf and len(nf.split()) >= 2 and nf in normalized_index:
+                candidate_set.update(normalized_index[nf])
+
+            # lines prefixed with 'E '
+            if ln.startswith('E '):
+                ln_after = ln[1:].strip()
+                if ln_after:
+                    nf2 = self._normalize_line(ln_after)
+                    if nf2 and len(nf2.split()) >= 2 and nf2 in normalized_index:
+                        candidate_set.update(normalized_index[nf2])
+
+        return candidate_set
+
+    def _expand_candidate_lines(
+        self,
+        tree: ast.AST,
+        full_lines: list[str],
+        candidate_set: set[int],
+        node_span_cap: int = 20,
+    ) -> list[int]:
+        expanded: set[int] = set(candidate_set)
+        for cl in list(candidate_set):
+            if cl - 1 >= 1:
+                expanded.add(cl - 1)
+            if cl + 1 <= len(full_lines):
+                expanded.add(cl + 1)
+
+        for node in ast.walk(tree):
+            lineno = getattr(node, "lineno", None)
+            end_lineno = getattr(node, "end_lineno", lineno)
+            if lineno is None or end_lineno is None:
+                continue
+            overlaps_any = any(lineno <= cl <= end_lineno for cl in candidate_set)
+            if overlaps_any and (end_lineno - lineno + 1) <= node_span_cap:
+                for ln_i in range(lineno, end_lineno + 1):
+                    if 1 <= ln_i <= len(full_lines):
+                        expanded.add(ln_i)
+        return sorted(expanded)
+
     def generate_relevant_ast_snippet(
-        self, problem: Dict[str, Any], error_output: str
+        self, problem: dict[str, Any], error_output: str
     ) -> str:
         """Generate a compact AST snippet focusing on nodes related to the error.
 
@@ -218,28 +307,14 @@ class TestCaseGenerator:
             tree = ast.parse(full_function)
             full_lines = full_function.splitlines()
 
-            # Candidate line numbers from error output lines that appear in the function text
-            candidate_lines: List[int] = []
-            for raw in error_output.split("\n"):
-                ln = raw.strip()
-                if not ln:
-                    continue
-                if ln.startswith("STDOUT:") or ln.startswith("STDERR:"):
-                    continue
-                if (
-                    ln.startswith("=== ")
-                    or ln.startswith("FAILED ")
-                    or ln.startswith("PASSED ")
-                ):
-                    continue
-                for idx, fl in enumerate(full_lines, start=1):
-                    if not fl:
-                        continue
-                    if ln == fl.strip() or (
-                        ln.lstrip() == fl.lstrip() and len(ln.split()) >= 2
-                    ):
-                        candidate_lines.append(idx)
-                        break
+            # Candidate lines from error output
+            normalized_to_indices = self._build_normalized_index(full_lines)
+            candidate_set = self._parse_error_output_for_lines(
+                error_output, full_lines, normalized_to_indices
+            )
+            candidate_lines: list[int] = self._expand_candidate_lines(
+                tree, full_lines, candidate_set
+            )
 
             # Error keyword → node predicate mapping
             # Use more specific error patterns for better accuracy
@@ -309,7 +384,7 @@ class TestCaseGenerator:
                 predicates.append(lambda n: isinstance(n, (ast.Import, ast.ImportFrom)))
 
             # Collect nodes with priority scoring
-            node_scores: List[tuple[ast.AST, int]] = []
+            node_scores: list[tuple[ast.AST, int]] = []
 
             for node in ast.walk(tree):
                 lineno = getattr(node, "lineno", None)
@@ -388,7 +463,7 @@ class TestCaseGenerator:
                     selected.extend(func_def.body[:3])
 
             # Generate concise AST representations
-            parts: List[str] = []
+            parts: list[str] = []
             seen_nodes = set()  # Avoid duplicate nodes
 
             for n in selected:
@@ -427,7 +502,7 @@ class TestCaseGenerator:
         except Exception as e:
             return f"Error generating relevant AST snippet: {e}"
 
-    def generate_prompt(self, problem: Dict[str, Any]) -> str:
+    def generate_prompt(self, problem: dict[str, Any]) -> str:
         """Create a prompt for Claude to generate test cases."""
 
         if self.include_docstring:
@@ -576,7 +651,7 @@ Start your response with "import pytest" and include only executable Python test
         """Get the total number of fix attempts available."""
         return max(1, self.max_pytest_runs - 1)
     
-    def get_usage_stats(self) -> Dict[str, Any]:
+    def get_usage_stats(self) -> dict[str, Any]:
         """Get current usage statistics."""
         return {
             "total_input_tokens": self.total_input_tokens,
@@ -615,7 +690,7 @@ Start your response with "import pytest" and include only executable Python test
     def update_final_stats(
         self,
         filepath: str,
-        problem: Dict[str, Any],
+        problem: dict[str, Any],
         evaluation_success: bool,
         fix_attempts_used: int,
         code_coverage: float = 0.0,
@@ -757,7 +832,7 @@ Start your response with "import pytest" and include only executable Python test
 
         print(f"{'='*80}\n")
 
-    def generate_test_cases(self, problem: Dict[str, Any], model: str) -> str:
+    def generate_test_cases(self, problem: dict[str, Any], model: str) -> str:
         """Generate test cases using Claude API."""
         prompt = self.generate_prompt(problem)
 
@@ -795,7 +870,7 @@ Start your response with "import pytest" and include only executable Python test
             return ""
 
     def save_test_cases(
-        self, problem: Dict[str, Any], test_cases: str, output_dir: str, model: str
+        self, problem: dict[str, Any], test_cases: str, output_dir: str, model: str
     ) -> str:
         """Save generated test cases to a file."""
         # Create model-specific output directory
@@ -845,7 +920,7 @@ Start your response with "import pytest" and include only executable Python test
 
         return str(filepath)
 
-    def run_pytest(self, test_file_path: str) -> Tuple[bool, str, float]:
+    def run_pytest(self, test_file_path: str) -> tuple[bool, str, float]:
         """Run pytest on the test file and return (success, error_output, coverage_percentage)."""
 
         # Use absolute path and run from project root
@@ -888,7 +963,7 @@ Start your response with "import pytest" and include only executable Python test
         original_code: str,
         error_output: str,
         attempt: int,
-        problem: Dict[str, Any],
+        problem: dict[str, Any],
         ast_snippet: Optional[str] = None,
     ) -> str:
         """Generate a prompt to fix test case errors with white box testing approach."""
@@ -908,6 +983,7 @@ FUNCTION BEING TESTED (WHITE BOX):
 {problem['prompt']}
 {problem['canonical_solution']}
 ```
+{ast_section}
 
 CURRENT TEST CODE WITH ERRORS:
 ```python
@@ -920,7 +996,6 @@ PYTEST ERROR OUTPUT:
 ```
 
  {fix_attempt_line}
-{ast_section}
 
 Requirements:
 - Return ONLY executable Python code that can be run directly
@@ -940,7 +1015,7 @@ Corrected code:"""
         test_code: str,
         error_output: str,
         attempt: int,
-        problem: Dict[str, Any],
+        problem: dict[str, Any],
         model: str,
     ) -> str:
         """Use LLM to fix test case errors."""
@@ -993,12 +1068,12 @@ Corrected code:"""
             return test_code  # Return original code if fixing fails
 
     def evaluate_and_fix_tests(
-        self, test_file_path: str, problem: Dict[str, Any], model: str
-    ) -> Tuple[bool, int, float]:
+        self, test_file_path: str, problem: dict[str, Any], model: str
+    ) -> tuple[bool, int, float]:
         """Evaluate test file with pytest and fix errors iteratively.
 
         Returns:
-            Tuple[bool, int, float]: (success, attempts_used, final_coverage)
+            tuple[bool, int, float]: (success, attempts_used, final_coverage)
         """
         if not self.enable_evaluation:
             return True, 0, 0.0
@@ -1074,8 +1149,8 @@ Corrected code:"""
         return False, self.max_pytest_runs, final_coverage
 
     def _generate_and_evaluate_test_cases(
-        self, problem: Dict[str, Any], output_dir: str = "generated_tests"
-    ) -> List[str]:
+        self, problem: dict[str, Any], output_dir: str = "generated_tests"
+    ) -> list[str]:
         """Generate test cases for a problem using all selected models, evaluate them, and return final filepaths."""
         print(f"Selected problem: {problem['task_id']}")
         print(
@@ -1143,7 +1218,7 @@ Corrected code:"""
 
         return final_filepaths
 
-    def _print_model_summary(self, model_results: Dict[str, Dict[str, Any]]) -> None:
+    def _print_model_summary(self, model_results: dict[str, dict[str, Any]]) -> None:
         """Print a summary of results for all models."""
         print(f"\n{'='*60}")
         print(f"MODEL PROCESSING SUMMARY")
@@ -1195,7 +1270,7 @@ Corrected code:"""
 
     def generate_for_random_problem(
         self, output_dir: str = "generated_tests"
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate test cases for a randomly selected problem."""
         if not self.problems:
             raise ValueError("No problems loaded. Call load_dataset() first.")
@@ -1205,7 +1280,7 @@ Corrected code:"""
 
     def generate_for_specific_problem(
         self, task_id: str, output_dir: str = "generated_tests"
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate test cases for a specific problem by task_id."""
         problem = next((p for p in self.problems if p["task_id"] == task_id), None)
         if not problem:
