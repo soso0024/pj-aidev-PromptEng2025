@@ -80,18 +80,18 @@ python run_batch_test_case_generator.py --start 0 --end 10
 
 ### Command Line Options
 
-| Option                 | Description                                                   | Default                      |
-| ---------------------- | ------------------------------------------------------------- | ---------------------------- |
-| `--dataset`            | Path to HumanEval dataset file                                | `dataset/HumanEval.jsonl`    |
-| `--output-dir`         | Output directory for test files                               | `generated_tests`            |
-| `--task-id`            | Specific task ID to generate tests for                        | Random selection             |
-| `--api-key`            | Claude API key                                                | From .env or environment     |
-| `--include-docstring`  | Include function docstring in prompt                          | `False` (signature only)     |
-| `--include-ast`        | Include AST of canonical solution in prompt                   | `False`                      |
-| `--show-prompt`        | Display prompt before sending to LLM and ask for confirmation | `False`                      |
-| `--disable-evaluation` | Disable automatic test evaluation and error fixing            | `False` (evaluation enabled) |
-| `--max-pytest-runs`    | Total pytest runs (initial + fixes)                           | `3`                          |
-| `--quiet-evaluation`   | Disable verbose output during error fixing process            | `False` (verbose enabled)    |
+| Option                 | Description                                                                | Default                      |
+| ---------------------- | -------------------------------------------------------------------------- | ---------------------------- |
+| `--dataset`            | Path to HumanEval dataset file                                             | `dataset/HumanEval.jsonl`    |
+| `--output-dir`         | Output directory for test files                                            | `generated_tests`            |
+| `--task-id`            | Specific task ID to generate tests for                                     | Random selection             |
+| `--api-key`            | Claude API key                                                             | From .env or environment     |
+| `--include-docstring`  | Include function docstring in prompt                                       | `False` (signature only)     |
+| `--include-ast`        | Include AST of canonical solution in prompt                                | `False`                      |
+| `--show-prompt`        | Display prompt before sending to LLM and ask for confirmation              | `False`                      |
+| `--disable-evaluation` | Disable automatic test evaluation and error fixing                         | `False` (evaluation enabled) |
+| `--max-pytest-runs`    | Total pytest runs (initial + fixes)                                        | `3`                          |
+| `--quiet-evaluation`   | Disable verbose output during error fixing process                         | `False` (verbose enabled)    |
 | `--ast-fix`            | Enable AST-focused error fixing (adds relevant AST snippet to fix prompts) | `False`                      |
 
 ### Examples
@@ -229,6 +229,85 @@ AssertionError: assert [1, 2] == [1]
 ✅ Tests passed on attempt 2 (Coverage: 85.7%)
 📝 Renamed test_humaneval_0.py → test_humaneval_0_success.py
 🎉 Test generation and evaluation completed successfully!
+```
+
+### AST-Based Error Fixing
+
+The `--ast-fix` option enables intelligent error fixing by analyzing the Abstract Syntax Tree (AST) of the function and identifying nodes most relevant to the error. This provides the LLM with focused context about the problematic code structure.
+
+#### How AST-Based Error Fixing Works
+
+When a test fails and `--ast-fix` is enabled:
+
+1. **Error Analysis**: The system parses the error output to identify error types and affected code lines
+2. **AST Parsing**: The canonical solution is parsed into an AST representation
+3. **Relevant Node Selection**: A sophisticated algorithm identifies AST nodes most likely related to the error
+4. **Context Generation**: The relevant AST nodes are included in the fix prompt to help the LLM understand the code structure
+
+#### Node Selection Algorithm
+
+The AST snippet generator uses multiple heuristics to identify relevant nodes:
+
+**Error-Specific Pattern Matching**:
+
+- **ZeroDivisionError**: Focuses on `BinOp` nodes with division operators (`Div`, `Mod`, `FloorDiv`)
+- **IndexError**: Targets `Subscript` nodes (list/string indexing operations)
+- **KeyError**: Also targets `Subscript` nodes (dictionary key access)
+- **AttributeError**: Identifies `Attribute` nodes (object attribute access)
+- **TypeError (operators)**: Focuses on `BinOp` nodes when "operand" is mentioned
+- **TypeError (calls)**: Targets `Call` nodes when function arguments are involved
+- **ValueError**: Looks for `Raise` and `Call` nodes
+- **RecursionError**: Identifies recursive `Call` nodes matching the function name
+- **NameError**: Focuses on `Name` nodes (variable references)
+- **ImportError**: Targets `Import` and `ImportFrom` nodes
+
+**Line-Based Matching**:
+
+- Extracts code lines from error output
+- Finds AST nodes whose line ranges overlap with error lines
+- Helps locate the exact error location in complex functions
+
+**Priority Scoring System**:
+
+- Nodes matching error patterns: +10 points (highest priority)
+- Nodes overlapping with error lines: +5 points
+- Common error-prone operations (`Call`, `BinOp`, `Subscript`, `Attribute`): +2 points
+- Nodes are sorted by score and top 15 most relevant are selected
+
+#### Example AST Output
+
+For a ZeroDivisionError in `return a / b`:
+
+```
+Line 2: BinOp (Div)
+BinOp(
+  left=Name(id='a', ctx=Load()),
+  op=Div(),
+  right=Name(id='b', ctx=Load())
+)
+```
+
+This focused AST snippet helps the LLM understand:
+
+- The exact operation causing the error (division)
+- The operands involved (`a` and `b`)
+- The code structure around the error
+
+#### Benefits of AST-Based Fixing
+
+1. **Focused Context**: Instead of sending the entire AST, only relevant nodes are included
+2. **Better Error Understanding**: The LLM sees the exact code structure causing issues
+3. **Improved Fix Quality**: Structural understanding leads to more accurate fixes
+4. **Efficient Token Usage**: Only essential AST information is sent
+
+#### Usage Example
+
+```bash
+# Enable AST-focused error fixing
+python run_test_case_generator.py --task-id "HumanEval/0" --ast-fix
+
+# Combine with AST in initial generation for maximum effectiveness
+python run_test_case_generator.py --task-id "HumanEval/0" --include-ast --ast-fix
 ```
 
 ## Output
@@ -536,7 +615,7 @@ Each `.stats.json` file contains:
 - `evaluation_enabled`: Whether automatic evaluation was used
 - `evaluation_success`: Whether tests finally passed after fixing
 - `fix_attempts_used`: Number of fix attempts actually used
-- `max_pytest_runs`: Maximum pytest runs that were configured
+- `max_pytest_runs`: Maximum pytest runs that were configured (kept as max_pytest_runs for backward compatibility)
 - `code_coverage_percent`: Final code coverage percentage from pytest --cov
 - `generated_file`: Final filename (includes success/failure suffix)
 - `total_cost_usd`: Now includes costs from all fix attempts, not just initial generation

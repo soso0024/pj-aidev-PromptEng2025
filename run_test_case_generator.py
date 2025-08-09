@@ -188,7 +188,9 @@ class TestCaseGenerator:
         try:
             entry_point = problem.get("entry_point", "")
             # Build function text (signature + body)
-            signature = self.extract_function_signature(problem.get("prompt", ""), entry_point)
+            signature = self.extract_function_signature(
+                problem.get("prompt", ""), entry_point
+            )
             if not signature:
                 # Fallback minimal signature
                 if entry_point:
@@ -210,12 +212,18 @@ class TestCaseGenerator:
                     continue
                 if ln.startswith("STDOUT:") or ln.startswith("STDERR:"):
                     continue
-                if ln.startswith("=== ") or ln.startswith("FAILED ") or ln.startswith("PASSED "):
+                if (
+                    ln.startswith("=== ")
+                    or ln.startswith("FAILED ")
+                    or ln.startswith("PASSED ")
+                ):
                     continue
                 for idx, fl in enumerate(full_lines, start=1):
                     if not fl:
                         continue
-                    if ln == fl.strip() or (ln.lstrip() == fl.lstrip() and len(ln.split()) >= 2):
+                    if ln == fl.strip() or (
+                        ln.lstrip() == fl.lstrip() and len(ln.split()) >= 2
+                    ):
                         candidate_lines.append(idx)
                         break
 
@@ -223,54 +231,76 @@ class TestCaseGenerator:
             # Use more specific error patterns for better accuracy
             predicates = []
             low = error_output.lower()
-            
+
             # Division errors
-            if "zerodivisionerror" in low or "division by zero" in low or "divide by zero" in low:
-                predicates.append(lambda n: isinstance(n, ast.BinOp) and isinstance(n.op, (ast.Div, ast.Mod, ast.FloorDiv)))
-            
+            if (
+                "zerodivisionerror" in low
+                or "division by zero" in low
+                or "divide by zero" in low
+            ):
+                predicates.append(
+                    lambda n: isinstance(n, ast.BinOp)
+                    and isinstance(n.op, (ast.Div, ast.Mod, ast.FloorDiv))
+                )
+
             # Index errors
-            if "indexerror" in low or "list index out of range" in low or "string index out of range" in low or "tuple index out of range" in low:
+            if (
+                "indexerror" in low
+                or "list index out of range" in low
+                or "string index out of range" in low
+                or "tuple index out of range" in low
+            ):
                 predicates.append(lambda n: isinstance(n, ast.Subscript))
-            
+
             # Key errors (dict/mapping access)
             if "keyerror" in low:
                 predicates.append(lambda n: isinstance(n, ast.Subscript))
-            
+
             # Attribute errors
             if "attributeerror" in low or "has no attribute" in low:
                 predicates.append(lambda n: isinstance(n, ast.Attribute))
-            
+
             # Type errors with operators
-            if "typeerror" in low and ("operand" in low or "not supported between" in low):
+            if "typeerror" in low and (
+                "operand" in low or "not supported between" in low
+            ):
                 predicates.append(lambda n: isinstance(n, ast.BinOp))
-            
+
             # Type errors with calls
-            if "typeerror" in low and ("takes" in low or "required" in low or "argument" in low):
+            if "typeerror" in low and (
+                "takes" in low or "required" in low or "argument" in low
+            ):
                 predicates.append(lambda n: isinstance(n, ast.Call))
-            
+
             # Value errors
             if "valueerror" in low:
-                predicates.append(lambda n: isinstance(n, ast.Raise) or isinstance(n, ast.Call))
-            
+                predicates.append(
+                    lambda n: isinstance(n, ast.Raise) or isinstance(n, ast.Call)
+                )
+
             # Recursion errors
             if "recursionerror" in low and entry_point:
-                predicates.append(lambda n: isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == entry_point)
-            
+                predicates.append(
+                    lambda n: isinstance(n, ast.Call)
+                    and isinstance(n.func, ast.Name)
+                    and n.func.id == entry_point
+                )
+
             # Name errors
             if "nameerror" in low or "is not defined" in low:
                 predicates.append(lambda n: isinstance(n, ast.Name))
-            
+
             # Import errors
             if "importerror" in low or "modulenotfounderror" in low:
                 predicates.append(lambda n: isinstance(n, (ast.Import, ast.ImportFrom)))
 
             # Collect nodes with priority scoring
             node_scores: List[tuple[ast.AST, int]] = []
-            
+
             for node in ast.walk(tree):
                 lineno = getattr(node, "lineno", None)
                 end_lineno = getattr(node, "end_lineno", lineno)
-                
+
                 # Check if node overlaps with error lines
                 overlaps = False
                 if lineno is not None:
@@ -278,10 +308,12 @@ class TestCaseGenerator:
                         if lineno <= cl <= (end_lineno or lineno):
                             overlaps = True
                             break
-                
+
                 # Check if node matches error-specific predicates
-                matches = any(pred(node) for pred in predicates) if predicates else False
-                
+                matches = (
+                    any(pred(node) for pred in predicates) if predicates else False
+                )
+
                 # Define interesting node types
                 interesting = isinstance(
                     node,
@@ -309,47 +341,57 @@ class TestCaseGenerator:
                         ast.Name,
                     ),
                 )
-                
+
                 if interesting:
                     # Calculate priority score
                     score = 0
                     if matches:
                         score += 10  # High priority for error-specific matches
                     if overlaps:
-                        score += 5   # Medium priority for line overlaps
-                    
+                        score += 5  # Medium priority for line overlaps
+
                     # Additional scoring based on node type relevance
-                    if isinstance(node, (ast.Call, ast.BinOp, ast.Subscript, ast.Attribute)):
+                    if isinstance(
+                        node, (ast.Call, ast.BinOp, ast.Subscript, ast.Attribute)
+                    ):
                         score += 2  # Common error sources
-                    
+
                     if score > 0:
                         node_scores.append((node, score))
-            
+
             # Sort by score (highest first) and select top nodes
             node_scores.sort(key=lambda x: x[1], reverse=True)
-            selected = [node for node, _ in node_scores[:20]]  # Limit to 20 most relevant nodes
+            selected = [
+                node for node, _ in node_scores[:20]
+            ]  # Limit to 20 most relevant nodes
 
             if not selected:
                 # Fallback: first few body statements for some structure
-                func_def = next((n for n in tree.body if isinstance(n, ast.FunctionDef)), None)
+                func_def = next(
+                    (n for n in tree.body if isinstance(n, ast.FunctionDef)), None
+                )
                 if func_def and func_def.body:
                     selected.extend(func_def.body[:3])
 
             # Generate concise AST representations
             parts: List[str] = []
             seen_nodes = set()  # Avoid duplicate nodes
-            
+
             for n in selected:
                 # Create a unique identifier for the node to avoid duplicates
-                node_id = (type(n).__name__, getattr(n, 'lineno', None), getattr(n, 'col_offset', None))
+                node_id = (
+                    type(n).__name__,
+                    getattr(n, "lineno", None),
+                    getattr(n, "col_offset", None),
+                )
                 if node_id in seen_nodes:
                     continue
                 seen_nodes.add(node_id)
-                
+
                 try:
                     # Create a more concise representation
                     node_info = f"Line {getattr(n, 'lineno', '?')}: {type(n).__name__}"
-                    
+
                     # Add relevant details based on node type
                     if isinstance(n, ast.BinOp):
                         node_info += f" ({type(n.op).__name__})"
@@ -359,12 +401,14 @@ class TestCaseGenerator:
                         node_info += f" (.{n.attr})"
                     elif isinstance(n, ast.Name):
                         node_info += f" ({n.id})"
-                    
+
                     # Add the full AST dump
                     parts.append(f"{node_info}\n{ast.dump(n, indent=2)}")
                 except Exception:
-                    parts.append(f"Line {getattr(n, 'lineno', '?')}: {type(n).__name__}")
-            
+                    parts.append(
+                        f"Line {getattr(n, 'lineno', '?')}: {type(n).__name__}"
+                    )
+
             return "\n\n".join(parts[:15]) if parts else "(no relevant AST nodes found)"
         except Exception as e:
             return f"Error generating relevant AST snippet: {e}"
@@ -1313,4 +1357,3 @@ def main():
 
 if __name__ == "__main__":
     exit(main())
-
