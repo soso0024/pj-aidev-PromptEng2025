@@ -37,7 +37,7 @@ class TestCaseGenerator:
     def __init__(
         self,
         api_key: str,
-        models: List[str] = None,
+        models: list[str] = None,
         include_docstring: bool = False,
         include_ast: bool = False,
         show_prompt: bool = False,
@@ -83,7 +83,7 @@ class TestCaseGenerator:
         # Whether to include a focused AST snippet in error-fix prompts
         self.ast_fix = ast_fix
 
-    def _load_model_config(self, config_path: str) -> Dict[str, Any]:
+    def _load_model_config(self, config_path: str) -> dict[str, Any]:
         """Load model configuration from JSON file."""
         try:
             with open(config_path, "r", encoding="utf-8") as f:
@@ -111,7 +111,7 @@ class TestCaseGenerator:
 
         print(f"Loaded {len(self.problems)} problems from dataset")
 
-    def select_random_problem(self) -> Dict[str, Any]:
+    def select_random_problem(self) -> dict[str, Any]:
         """Randomly select a problem from the dataset."""
         return random.choice(self.problems)
 
@@ -190,7 +190,7 @@ class TestCaseGenerator:
             return f"Error generating AST: {e}"
 
     def generate_relevant_ast_snippet(
-        self, problem: Dict[str, Any], error_output: str
+        self, problem: dict[str, Any], error_output: str
     ) -> str:
         """Generate a compact AST snippet focusing on nodes related to the error.
 
@@ -223,7 +223,7 @@ class TestCaseGenerator:
             def _normalize_line(s: str) -> str:
                 return re.sub(r"\s+", " ", s.strip())
 
-            normalized_to_indices: Dict[str, List[int]] = {}
+            normalized_to_indices: dict[str, list[int]] = {}
             for idx, fl in enumerate(full_lines, start=1):
                 nf = _normalize_line(fl)
                 if not nf:
@@ -302,7 +302,7 @@ class TestCaseGenerator:
                         if 1 <= ln_i <= len(full_lines):
                             expanded_candidates.add(ln_i)
 
-            candidate_lines: List[int] = sorted(expanded_candidates)
+            candidate_lines: list[int] = sorted(expanded_candidates)
 
             # Error keyword → node predicate mapping
             # Use more specific error patterns for better accuracy
@@ -372,7 +372,7 @@ class TestCaseGenerator:
                 predicates.append(lambda n: isinstance(n, (ast.Import, ast.ImportFrom)))
 
             # Collect nodes with priority scoring
-            node_scores: List[Tuple[ast.AST, int]] = []
+            node_scores: list[tuple[ast.AST, int]] = []
 
             for node in ast.walk(tree):
                 lineno = getattr(node, "lineno", None)
@@ -451,7 +451,7 @@ class TestCaseGenerator:
                     selected.extend(func_def.body[:3])
 
             # Generate concise AST representations
-            parts: List[str] = []
+            parts: list[str] = []
             seen_nodes = set()  # Avoid duplicate nodes
 
             for n in selected:
@@ -490,7 +490,7 @@ class TestCaseGenerator:
         except Exception as e:
             return f"Error generating relevant AST snippet: {e}"
 
-    def generate_prompt(self, problem: Dict[str, Any]) -> str:
+    def generate_prompt(self, problem: dict[str, Any]) -> str:
         """Create a prompt for Claude to generate test cases."""
 
         if self.include_docstring:
@@ -639,7 +639,7 @@ Start your response with "import pytest" and include only executable Python test
         """Get the total number of fix attempts available."""
         return max(1, self.max_pytest_runs - 1)
     
-    def get_usage_stats(self) -> Dict[str, Any]:
+    def get_usage_stats(self) -> dict[str, Any]:
         """Get current usage statistics."""
         return {
             "total_input_tokens": self.total_input_tokens,
@@ -678,7 +678,7 @@ Start your response with "import pytest" and include only executable Python test
     def update_final_stats(
         self,
         filepath: str,
-        problem: Dict[str, Any],
+        problem: dict[str, Any],
         evaluation_success: bool,
         fix_attempts_used: int,
         code_coverage: float = 0.0,
@@ -820,7 +820,7 @@ Start your response with "import pytest" and include only executable Python test
 
         print(f"{'='*80}\n")
 
-    def generate_test_cases(self, problem: Dict[str, Any], model: str) -> str:
+    def generate_test_cases(self, problem: dict[str, Any], model: str) -> str:
         """Generate test cases using Claude API."""
         prompt = self.generate_prompt(problem)
 
@@ -858,7 +858,7 @@ Start your response with "import pytest" and include only executable Python test
             return ""
 
     def save_test_cases(
-        self, problem: Dict[str, Any], test_cases: str, output_dir: str, model: str
+        self, problem: dict[str, Any], test_cases: str, output_dir: str, model: str
     ) -> str:
         """Save generated test cases to a file."""
         # Create model-specific output directory
@@ -908,7 +908,7 @@ Start your response with "import pytest" and include only executable Python test
 
         return str(filepath)
 
-    def run_pytest(self, test_file_path: str) -> Tuple[bool, str, float]:
+    def run_pytest(self, test_file_path: str) -> tuple[bool, str, float]:
         """Run pytest on the test file and return (success, error_output, coverage_percentage)."""
 
         # Use absolute path and run from project root
@@ -951,7 +951,7 @@ Start your response with "import pytest" and include only executable Python test
         original_code: str,
         error_output: str,
         attempt: int,
-        problem: Dict[str, Any],
+        problem: dict[str, Any],
         ast_snippet: Optional[str] = None,
     ) -> str:
         """Generate a prompt to fix test case errors with white box testing approach."""
@@ -1003,7 +1003,7 @@ Corrected code:"""
         test_code: str,
         error_output: str,
         attempt: int,
-        problem: Dict[str, Any],
+        problem: dict[str, Any],
         model: str,
     ) -> str:
         """Use LLM to fix test case errors."""
@@ -1056,12 +1056,12 @@ Corrected code:"""
             return test_code  # Return original code if fixing fails
 
     def evaluate_and_fix_tests(
-        self, test_file_path: str, problem: Dict[str, Any], model: str
-    ) -> Tuple[bool, int, float]:
+        self, test_file_path: str, problem: dict[str, Any], model: str
+    ) -> tuple[bool, int, float]:
         """Evaluate test file with pytest and fix errors iteratively.
 
         Returns:
-            Tuple[bool, int, float]: (success, attempts_used, final_coverage)
+            tuple[bool, int, float]: (success, attempts_used, final_coverage)
         """
         if not self.enable_evaluation:
             return True, 0, 0.0
@@ -1137,8 +1137,8 @@ Corrected code:"""
         return False, self.max_pytest_runs, final_coverage
 
     def _generate_and_evaluate_test_cases(
-        self, problem: Dict[str, Any], output_dir: str = "generated_tests"
-    ) -> List[str]:
+        self, problem: dict[str, Any], output_dir: str = "generated_tests"
+    ) -> list[str]:
         """Generate test cases for a problem using all selected models, evaluate them, and return final filepaths."""
         print(f"Selected problem: {problem['task_id']}")
         print(
@@ -1206,7 +1206,7 @@ Corrected code:"""
 
         return final_filepaths
 
-    def _print_model_summary(self, model_results: Dict[str, Dict[str, Any]]) -> None:
+    def _print_model_summary(self, model_results: dict[str, dict[str, Any]]) -> None:
         """Print a summary of results for all models."""
         print(f"\n{'='*60}")
         print(f"MODEL PROCESSING SUMMARY")
@@ -1258,7 +1258,7 @@ Corrected code:"""
 
     def generate_for_random_problem(
         self, output_dir: str = "generated_tests"
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate test cases for a randomly selected problem."""
         if not self.problems:
             raise ValueError("No problems loaded. Call load_dataset() first.")
@@ -1268,7 +1268,7 @@ Corrected code:"""
 
     def generate_for_specific_problem(
         self, task_id: str, output_dir: str = "generated_tests"
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate test cases for a specific problem by task_id."""
         problem = next((p for p in self.problems if p["task_id"] == task_id), None)
         if not problem:
