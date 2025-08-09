@@ -92,7 +92,7 @@ python run_batch_test_case_generator.py --start 0 --end 10
 | `--disable-evaluation` | Disable automatic test evaluation and error fixing                         | `False` (evaluation enabled) |
 | `--max-pytest-runs`    | Total pytest runs (initial + fixes)                                        | `3`                          |
 | `--quiet-evaluation`   | Disable verbose output during error fixing process                         | `False` (verbose enabled)    |
-| `--ast-fix`            | Enable AST-focused error fixing (adds relevant AST snippet to fix prompts) | `False`                      |
+| `--ast-fix`            | Enable AST-focused error fixing - adds relevant AST nodes to fix prompts for better structural understanding | `False`                      |
 
 ### Examples
 
@@ -300,6 +300,71 @@ This focused AST snippet helps the LLM understand:
 3. **Improved Fix Quality**: Structural understanding leads to more accurate fixes
 4. **Efficient Token Usage**: Only essential AST information is sent
 
+#### How AST Information is Provided to the LLM
+
+When `--ast-fix` is enabled and a test fails, the system enhances the fix prompt sent to the LLM:
+
+1. **Standard Fix Prompt Components**:
+   - The original function being tested (white box approach)
+   - The current test code with errors
+   - The pytest error output
+   - Clear instructions to fix the code
+
+2. **Additional AST Context** (when `--ast-fix` is enabled):
+   - A focused AST snippet is inserted between the function and test code
+   - Only AST nodes relevant to the error are included
+   - The AST is presented in a readable format with line numbers
+
+**Example Fix Prompt Structure**:
+```
+FUNCTION BEING TESTED (WHITE BOX):
+def divide(a, b):
+    return a / b
+
+RELEVANT AST SNIPPET OF FUNCTION (focus on error):
+```
+Line 2: BinOp (Div)
+BinOp(
+  left=Name(id='a', ctx=Load()),
+  op=Div(),
+  right=Name(id='b', ctx=Load())
+)
+```
+
+CURRENT TEST CODE WITH ERRORS:
+[test code here]
+
+PYTEST ERROR OUTPUT:
+ZeroDivisionError: division by zero
+
+This is fix attempt 1 of 2.
+```
+
+The LLM receives this enhanced context and can better understand:
+- The structure of the code that's causing the error
+- The specific operation types involved (e.g., division, indexing)
+- The relationship between variables and operations
+- The exact location and nature of the problem
+
+This structural information helps the LLM generate more accurate fixes by understanding not just the error message, but the underlying code patterns that need to be addressed in the test cases.
+
+#### Comparison: Regular vs AST-Based Error Fixing
+
+**Without `--ast-fix`** (Regular fixing):
+- LLM sees: function code + test code + error message
+- Must infer the problem from error text alone
+- May miss structural issues or edge cases
+
+**With `--ast-fix`** (AST-enhanced fixing):
+- LLM sees: function code + **relevant AST nodes** + test code + error message
+- Gets explicit structural information about error-prone operations
+- Can identify patterns like division operations, list indexing, attribute access
+- Better understanding leads to more comprehensive test fixes
+
+For example, with a `ZeroDivisionError`:
+- Regular: LLM sees "division by zero" error
+- AST-enhanced: LLM also sees the `BinOp(op=Div())` node, understanding it's specifically a division operation between variables `a` and `b`
+
 #### Usage Example
 
 ```bash
@@ -309,6 +374,21 @@ python run_test_case_generator.py --task-id "HumanEval/0" --ast-fix
 # Combine with AST in initial generation for maximum effectiveness
 python run_test_case_generator.py --task-id "HumanEval/0" --include-ast --ast-fix
 ```
+
+#### When to Use `--ast-fix`
+
+Consider enabling `--ast-fix` when:
+- Working with complex algorithms that have multiple error-prone operations
+- Dealing with functions that handle edge cases (division by zero, empty lists, null checks)
+- Test generation fails repeatedly with type errors or runtime exceptions
+- You want more thorough test coverage of error conditions
+
+The option is particularly effective for problems involving:
+- Mathematical operations (division, modulo)
+- List/array operations (indexing, slicing)
+- Dictionary operations (key access)
+- Object attribute access
+- Recursive functions
 
 ## Output
 
