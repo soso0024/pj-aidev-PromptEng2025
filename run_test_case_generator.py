@@ -989,11 +989,19 @@ Start your response with "import pytest" and include only executable Python test
         total_fix_attempts = self.get_total_fix_attempts()
         fix_attempt_line = f"This is fix attempt {attempt} of {total_fix_attempts}."
 
+        # Get function info based on include_docstring flag
+        if self.include_docstring:
+            function_info = problem['prompt']
+        else:
+            function_info = self.extract_function_signature(
+                problem['prompt'], problem['entry_point']
+            )
+
         return f"""The following test code has errors when running pytest. Please fix the issues and return ONLY the corrected Python code, no explanations or markdown.
 
 FUNCTION BEING TESTED (WHITE BOX):
 ```python
-{problem['prompt']}
+{function_info}
 {problem['canonical_solution']}
 ```
 {ast_section}
