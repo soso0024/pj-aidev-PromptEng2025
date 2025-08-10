@@ -203,7 +203,10 @@ class TestCaseGenerator:
         return index
 
     def _parse_error_output_for_lines(
-        self, error_output: str, full_lines: list[str], normalized_index: dict[str, list[int]]
+        self,
+        error_output: str,
+        full_lines: list[str],
+        normalized_index: dict[str, list[int]],
     ) -> set[int]:
         candidate_set: set[int] = set()
         for raw in error_output.split("\n"):
@@ -230,8 +233,8 @@ class TestCaseGenerator:
                     pass
 
             # pytest excerpt line starting with '>'
-            if raw.lstrip().startswith('>'):
-                excerpt = raw.lstrip().lstrip('>')
+            if raw.lstrip().startswith(">"):
+                excerpt = raw.lstrip().lstrip(">")
                 nf = self._normalize_line(excerpt)
                 if nf in normalized_index:
                     candidate_set.update(normalized_index[nf])
@@ -243,7 +246,7 @@ class TestCaseGenerator:
                 candidate_set.update(normalized_index[nf])
 
             # lines prefixed with 'E '
-            if ln.startswith('E '):
+            if ln.startswith("E "):
                 ln_after = ln[1:].strip()
                 if ln_after:
                     nf2 = self._normalize_line(ln_after)
@@ -437,7 +440,9 @@ class TestCaseGenerator:
                     if matches:
                         score += AST_SCORE_ERROR_MATCH  # High priority for error-specific matches
                     if overlaps:
-                        score += AST_SCORE_LINE_OVERLAP  # Medium priority for line overlaps
+                        score += (
+                            AST_SCORE_LINE_OVERLAP  # Medium priority for line overlaps
+                        )
 
                     # Additional scoring based on node type relevance
                     if isinstance(
@@ -498,7 +503,11 @@ class TestCaseGenerator:
                         f"Line {getattr(n, 'lineno', '?')}: {type(n).__name__}"
                     )
 
-            return "\n\n".join(parts[:MAX_AST_OUTPUT_NODES]) if parts else "(no relevant AST nodes found)"
+            return (
+                "\n\n".join(parts[:MAX_AST_OUTPUT_NODES])
+                if parts
+                else "(no relevant AST nodes found)"
+            )
         except Exception as e:
             return f"Error generating relevant AST snippet: {e}"
 
@@ -650,7 +659,7 @@ Start your response with "import pytest" and include only executable Python test
     def get_total_fix_attempts(self) -> int:
         """Get the total number of fix attempts available."""
         return max(1, self.max_pytest_runs - 1)
-    
+
     def get_usage_stats(self) -> dict[str, Any]:
         """Get current usage statistics."""
         return {
@@ -954,7 +963,11 @@ Start your response with "import pytest" and include only executable Python test
             return success, output, coverage_percentage
 
         except subprocess.TimeoutExpired:
-            return False, f"Error: pytest execution timed out after {PYTEST_TIMEOUT_SECONDS} seconds", 0.0
+            return (
+                False,
+                f"Error: pytest execution timed out after {PYTEST_TIMEOUT_SECONDS} seconds",
+                0.0,
+            )
         except Exception as e:
             return False, f"Error running pytest: {str(e)}", 0.0
 
