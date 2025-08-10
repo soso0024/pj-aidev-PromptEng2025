@@ -1,0 +1,88 @@
+# Test cases for HumanEval/130
+# Generated using Claude API
+
+
+def tri(n):
+    """Everyone knows Fibonacci sequence, it was studied deeply by mathematicians in 
+    the last couple centuries. However, what people don't know is Tribonacci sequence.
+    Tribonacci sequence is defined by the recurrence:
+    tri(1) = 3
+    tri(n) = 1 + n / 2, if n is even.
+    tri(n) =  tri(n - 1) + tri(n - 2) + tri(n + 1), if n is odd.
+    For example:
+    tri(2) = 1 + (2 / 2) = 2
+    tri(4) = 3
+    tri(3) = tri(2) + tri(1) + tri(4)
+           = 2 + 3 + 3 = 8 
+    You are given a non-negative integer number n, you have to a return a list of the 
+    first n + 1 numbers of the Tribonacci sequence.
+    Examples:
+    tri(3) = [1, 3, 2, 8]
+    """
+
+    if n == 0:
+        return [1]
+    my_tri = [1, 3]
+    for i in range(2, n + 1):
+        if i % 2 == 0:
+            my_tri.append(i / 2 + 1)
+        else:
+            my_tri.append(my_tri[i - 1] + my_tri[i - 2] + (i + 3) / 2)
+    return my_tri
+
+
+# Generated test cases:
+import pytest
+from typing import List
+
+def tri(n):
+    if n < 0:
+        raise ValueError("Input must be non-negative")
+    
+    if not isinstance(n, int):
+        raise TypeError("Input must be an integer")
+    
+    if n == 0:
+        return [1]
+    
+    my_tri = [1, 3]
+    for i in range(2, n + 1):
+        if i % 2 == 0:
+            my_tri.append(int(i / 2 + 1))
+        else:
+            my_tri.append(int(my_tri[i - 1] + my_tri[i - 2] + (i + 1) / 2))
+    return my_tri
+
+def test_tri_zero():
+    assert tri(0) == [1]
+
+def test_tri_one():
+    assert tri(1) == [1, 3]
+
+def test_tri_two():
+    assert tri(2) == [1, 3, 2]
+
+def test_tri_three():
+    assert tri(3) == [1, 3, 2, 8]
+
+def test_tri_five():
+    assert tri(5) == [1, 3, 2, 8, 5, 23]
+
+@pytest.mark.parametrize("n,expected", [
+    (0, [1]),
+    (1, [1, 3]),
+    (2, [1, 3, 2]),
+    (3, [1, 3, 2, 8]),
+    (4, [1, 3, 2, 8, 5]),
+    (5, [1, 3, 2, 8, 5, 23])
+])
+def test_tri_parametrized(n, expected):
+    assert tri(n) == expected
+
+def test_tri_type_error():
+    with pytest.raises(TypeError):
+        tri("not a number")
+
+def test_tri_negative_input():
+    with pytest.raises(ValueError):
+        tri(-1)
