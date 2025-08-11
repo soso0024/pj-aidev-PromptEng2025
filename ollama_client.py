@@ -108,17 +108,35 @@ class Messages:
             raise Exception(f"Ollama API request failed: {str(e)}")
         except json.JSONDecodeError as e:
             raise Exception(f"Failed to parse Ollama response: {str(e)}")
-
+    
     def _convert_messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:
         """Convert chat messages to a single prompt string."""
-        # For now, just use the last user message as the prompt
-        # This is a simplification - you might want to include more context
-        for message in reversed(messages):
-            if message.get("role") == "user":
-                return message.get("content", "")
-
-        # Fallback if no user message found
-        return messages[-1].get("content", "") if messages else ""
+        prompt_parts = []
+        
+        for message in messages:
+            role = message.get("role")
+            content = message.get("content", "")
+            
+            if role and content:
+                # Include role information for better context
+                if role == "system":
+                    prompt_parts.append(f"System: {content}")
+                elif role == "user":
+                    prompt_parts.append(f"Human: {content}")
+                elif role == "assistant":
+                    prompt_parts.append(f"Assistant: {content}")
+        
+        if not prompt_parts:
+            return ""
+        
+        # Join all messages with newlines for context
+        full_prompt = "\n\n".join(prompt_parts)
+        
+        # Add a final prompt indicator if the last message was from user
+        if messages and messages[-1].get("role") == "user":
+            full_prompt += "\n\nAssistant:"
+        
+        return full_prompt
 
 
 class Ollama:
@@ -132,15 +150,15 @@ class Ollama:
         """
         self.base_url = base_url
         self.messages = Messages(base_url)
-
+        
     def test_connection(self) -> bool:
         """Test if Ollama server is accessible."""
         try:
             response = requests.get(f"{self.base_url}/api/tags")
             return response.status_code == 200
-        except:
+        except requests.exceptions.RequestException:
             return False
-
+    
     def list_models(self) -> List[str]:
         """List available models on the Ollama server."""
         try:
@@ -148,5 +166,5 @@ class Ollama:
             response.raise_for_status()
             data = response.json()
             return [model["name"] for model in data.get("models", [])]
-        except:
+        except (requests.exceptions.RequestException, json.JSONDecodeError):
             return []

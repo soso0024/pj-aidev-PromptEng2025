@@ -1439,7 +1439,16 @@ def main():
     api_key = args.api_key or os.getenv("ANTHROPIC_API_KEY")
 
     # Check if we need an API key (only for Anthropic models)
-    models_config = json.load(open("models_config.json", "r"))
+    try:
+        with open("models_config.json", "r") as f:
+            models_config = json.load(f)
+    except FileNotFoundError:
+        print("Error: models_config.json not found.")
+        return 1
+    except json.JSONDecodeError:
+        print("Error: models_config.json contains invalid JSON.")
+        return 1
+    
     selected_models = args.models if args.models else [models_config["default_model"]]
 
     # Check if any selected model requires Anthropic API
