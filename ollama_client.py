@@ -102,9 +102,9 @@ class Messages:
             return Message(content=content, usage=usage)
 
         except requests.exceptions.RequestException as e:
-            raise Exception(f"Ollama API request failed: {str(e)}")
+            raise Exception(f"Ollama API request failed: {str(e)}") from e
         except json.JSONDecodeError as e:
-            raise Exception(f"Failed to parse Ollama response: {str(e)}")
+            raise Exception(f"Failed to parse Ollama response: {str(e)}") from e
     
     def _convert_messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:
         """Convert chat messages to a single prompt string."""
