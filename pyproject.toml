@@ -13,5 +13,6 @@ dependencies = [
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.14.1",
     "python-dotenv>=1.0.0",
+    "requests>=2.32.4",
     "seaborn>=0.12.0",
 ]

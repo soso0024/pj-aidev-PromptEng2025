@@ -3,6 +3,7 @@
     "claude-3-5-sonnet-20241022": {
       "api_name": "claude-3-5-sonnet-20241022",
       "folder_name": "claude-3-5-sonnet",
+      "provider": "anthropic",
       "pricing": {
         "input_per_1k": 0.003,
         "output_per_1k": 0.015
@@ -11,6 +12,7 @@
     "claude-3-5-haiku-20241022": {
       "api_name": "claude-3-5-haiku-20241022",
       "folder_name": "claude-3-5-haiku",
+      "provider": "anthropic",
       "pricing": {
         "input_per_1k": 0.00025,
         "output_per_1k": 0.00125
@@ -19,11 +21,32 @@
     "claude-3-haiku-20240307": {
       "api_name": "claude-3-haiku-20240307",
       "folder_name": "claude-3-haiku",
+      "provider": "anthropic",
       "pricing": {
         "input_per_1k": 0.00025,
         "output_per_1k": 0.00125
       }
+    },
+    "ollama-local": {
+      "api_name": "deepseek-r1:1.5b",
+      "folder_name": "ollama-local-deepseek",
+      "provider": "ollama",
+      "base_url": "http://192.168.3.26:11434",
+      "pricing": {
+        "input_per_1k": 0.0,
+        "output_per_1k": 0.0
+      }
+    },
+    "ollama-phi3": {
+      "api_name": "phi3:3.8b",
+      "folder_name": "ollama-local-phi3",
+      "provider": "ollama",
+      "base_url": "http://192.168.3.26:11434",
+      "pricing": {
+        "input_per_1k": 0.0,
+        "output_per_1k": 0.0
+      }
     }
   },
-  "default_model": "claude-3-haiku-20240307"
+  "default_model": "ollama-local"
 }
