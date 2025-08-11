@@ -115,6 +115,9 @@ class TestCaseGenerator:
                         "base_url", "http://localhost:11434"
                     )
                     break
+            
+            # Allow environment variable override for Ollama base URL
+            ollama_base_url = os.getenv("OLLAMA_BASE_URL", ollama_base_url)
 
             if ollama_base_url:
                 clients["ollama"] = Ollama(base_url=ollama_base_url)

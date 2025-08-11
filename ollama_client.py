@@ -90,14 +90,11 @@ class Messages:
                 if len(parts) > 1:
                     generated_text = parts[1].strip()
 
-            # Calculate token counts (approximate)
-            # Ollama doesn't provide exact token counts, so we estimate
-            input_tokens = len(prompt.split()) * 1.3  # Rough estimate
-            output_tokens = len(generated_text.split()) * 1.3  # Rough estimate
-
-            # Create response in Anthropic-like format
+            # Token counting for Ollama (simplified since it's free)
+            # We just return 0 for both since Ollama is free and we don't need accurate counts
             usage = Usage(
-                input_tokens=int(input_tokens), output_tokens=int(output_tokens)
+                input_tokens=0,
+                output_tokens=0
             )
 
             content = [MessageContent(text=generated_text)]
