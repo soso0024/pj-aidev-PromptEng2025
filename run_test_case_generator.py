@@ -560,9 +560,9 @@ class TestCaseGenerator:
         # since the canonical implementation below already includes the signature.
         signature_section = ""
         if self.include_docstring:
-            # Include full function signature with docstring
+            # Include full function definition (signature + docstring)
             function_info = problem["prompt"]
-            signature_section = f"\nDocstring:\n{function_info}\n\n"
+            signature_section = f"\nSignature and Docstring:\n{function_info}\n\n"
 
         ast_section = ""
         if self.include_ast:
