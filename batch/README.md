@@ -168,7 +168,7 @@ The batch generator includes robust error handling:
 
 ## Integration with Main Tool
 
-The batch generator wraps the main `run_test_case_generator.py` tool, passing through all supported options. Ensure the main generator is in the same directory.
+The batch generator wraps the main `run_test_case_generator.py` tool. It always runs in non-interactive mode by forcing `--no-show-prompt` to avoid hangs. If you want interactive prompt previews, use the single-run tool directly.
 
 ## Requirements
 

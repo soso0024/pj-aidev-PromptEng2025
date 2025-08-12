@@ -90,6 +90,8 @@ class BatchTestGenerator:
             cmd.append("--disable-evaluation")
         if self.quiet_evaluation:
             cmd.append("--quiet-evaluation")
+        # Always force non-interactive mode for batch runs
+        cmd.append("--no-show-prompt")
 
         return cmd
 
