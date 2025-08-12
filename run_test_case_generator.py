@@ -115,7 +115,7 @@ class TestCaseGenerator:
                         "base_url", "http://localhost:11434"
                     )
                     break
-            
+
             # Allow environment variable override for Ollama base URL
             ollama_base_url = os.getenv("OLLAMA_BASE_URL", ollama_base_url)
 
@@ -555,14 +555,14 @@ class TestCaseGenerator:
     def generate_prompt(self, problem: dict[str, Any]) -> str:
         """Create a prompt for Claude to generate test cases."""
 
+        # Optionally include function signature/docstring section.
+        # If --include-docstring is NOT set, omit this section entirely to avoid redundancy
+        # since the canonical implementation below already includes the signature.
+        signature_section = ""
         if self.include_docstring:
-            # Include full function signature with docstring
+            # Include full function definition (signature + docstring)
             function_info = problem["prompt"]
-        else:
-            # Include only function signature without docstring
-            function_info = self.extract_function_signature(
-                problem["prompt"], problem["entry_point"]
-            )
+            signature_section = f"\nSignature and Docstring:\n{function_info}\n\n"
 
         ast_section = ""
         if self.include_ast:
@@ -578,10 +578,7 @@ AST representation of canonical solution:
 
         prompt = f"""Generate pytest test cases for this function. Return ONLY executable Python code, no explanations or markdown.
 
-Function signature:
-{function_info}
-
-Canonical implementation:
+{signature_section}Canonical implementation:
 ```python
 def {problem['entry_point']}({problem['prompt'].split('def ' + problem['entry_point'] + '(')[1].split(')')[0]}):
 {problem['canonical_solution']}
@@ -1042,15 +1039,20 @@ Start your response with "import pytest" and include only executable Python test
 
         # Get function info based on include_docstring flag
         if self.include_docstring:
-            function_info = problem["prompt"]
+            function_info = problem.get("prompt", "")
         else:
-            function_info = self.extract_function_signature(
-                problem["prompt"], problem["entry_point"]
-            )
+            entry_point = problem.get("entry_point")
+            if entry_point:
+                function_info = self.extract_function_signature(
+                    problem.get("prompt", ""), entry_point
+                )
+            else:
+                # Fallback gracefully when entry_point is missing in problem dict
+                function_info = problem.get("prompt", "")
 
         return f"""The following test code has errors when running pytest. Please fix the issues and return ONLY the corrected Python code, no explanations or markdown.
 
-FUNCTION BEING TESTED (WHITE BOX):
+FUNCTION BEING TESTED:
 ```python
 {function_info}
 {problem['canonical_solution']}
@@ -1451,7 +1453,7 @@ def main():
     except json.JSONDecodeError:
         print("Error: models_config.json contains invalid JSON.")
         return 1
-    
+
     selected_models = args.models if args.models else [models_config["default_model"]]
 
     # Check if any selected model requires Anthropic API
