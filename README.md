@@ -370,7 +370,7 @@ When `--ast-fix` is enabled and a test fails, the system enhances the fix prompt
 **Example Fix Prompt Structure**:
 
 ```
-FUNCTION BEING TESTED (WHITE BOX):
+FUNCTION BEING TESTED:
 def divide(a, b):
     return a / b
 
