@@ -139,7 +139,7 @@ python run_batch_test_case_generator.py --start 0 --end 10
 | `--api-key`            | Claude API key                                                                                               | From .env or environment     |
 | `--include-docstring`  | Include function docstring in prompt                                                                         | `False` (signature only)     |
 | `--include-ast`        | Include AST of canonical solution in prompt                                                                  | `False`                      |
-| `--show-prompt`        | Display prompt before sending to LLM and ask for confirmation                                                | `False`                      |
+| `--show-prompt`        | Display prompt before sending to LLM and ask for confirmation (use `--no-show-prompt` to disable)            | `True`                       |
 | `--disable-evaluation` | Disable automatic test evaluation and error fixing                                                           | `False` (evaluation enabled) |
 | `--max-pytest-runs`    | Total pytest runs (initial + fixes)                                                                          | `3`                          |
 | `--quiet-evaluation`   | Disable verbose output during error fixing process                                                           | `False` (verbose enabled)    |
@@ -177,10 +177,10 @@ python run_test_case_generator.py --include-ast
 python run_test_case_generator.py --ast-fix
 ```
 
-#### Preview prompt before sending to LLM:
+#### Disable prompt preview for automation:
 
 ```bash
-python run_test_case_generator.py --show-prompt
+python run_test_case_generator.py --no-show-prompt
 ```
 
 #### Use custom dataset and output directory:
@@ -192,7 +192,7 @@ python run_test_case_generator.py --dataset path/to/custom.jsonl --output-dir my
 #### Combine options:
 
 ```bash
-python run_test_case_generator.py --task-id "HumanEval/5" --include-docstring --include-ast --show-prompt --output-dir custom_tests
+python run_test_case_generator.py --task-id "HumanEval/5" --include-docstring --include-ast --no-show-prompt --output-dir custom_tests
 ```
 
 #### Combine with AST-focused error fixing:
@@ -238,8 +238,8 @@ python run_test_case_generator.py --task-id "HumanEval/0" --max-pytest-runs 5
 # Quiet mode (less verbose output during fixing)
 python run_test_case_generator.py --task-id "HumanEval/0" --quiet-evaluation
 
-# Interactive mode (approve each fix attempt)
-python run_test_case_generator.py --task-id "HumanEval/0" --show-prompt
+# Non-interactive mode (skip confirmations)
+python run_test_case_generator.py --task-id "HumanEval/0" --no-show-prompt
 ```
 
 #### White Box Error Fixing
@@ -370,7 +370,7 @@ When `--ast-fix` is enabled and a test fails, the system enhances the fix prompt
 **Example Fix Prompt Structure**:
 
 ```
-FUNCTION BEING TESTED (WHITE BOX):
+FUNCTION BEING TESTED:
 def divide(a, b):
     return a / b
 
@@ -657,12 +657,11 @@ python run_test_case_generator.py --include-docstring --include-ast
 
 ### Interactive Prompt Preview
 
-Use `--show-prompt` to:
+By default, prompt preview is enabled. Use `--no-show-prompt` to:
 
-- Preview the exact prompt that will be sent to Claude
-- See estimated token count and cost
-- Decide whether to proceed, modify, or cancel
-- Avoid unexpected API charges
+- Skip the preview of the prompt sent to Claude
+- Avoid interactive confirmations in automated contexts
+- Prevent "EOF when reading a line" in non-interactive environments
 
 ### Pricing Information
 
@@ -781,10 +780,10 @@ Each `.stats.json` file contains:
    - The generated tests import the function from the same file
    - Make sure to run pytest from the correct directory
 
-5. **EOF when reading a line (with --show-prompt)**
+5. **EOF when reading a line (prompt preview enabled)**
 
    - This happens when running non-interactively
-   - Either run in an interactive terminal or omit `--show-prompt`
+   - Either run in an interactive terminal or add `--no-show-prompt`
 
 6. **Syntax errors in generated pytest code**
 
@@ -827,7 +826,7 @@ python run_test_case_generator.py --task-id "HumanEval/0" --include-docstring --
 
 ### Cost-Effective Workflow
 
-1. Start with `--show-prompt` to understand token usage
+1. By default, prompt preview helps you understand token usage
 2. Use basic generation for simple functions
 3. Add `--include-docstring` for complex functions needing examples
 4. Add `--include-ast` for functions with complex logic structure

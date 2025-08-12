@@ -1413,8 +1413,12 @@ def main():
     )
     parser.add_argument(
         "--show-prompt",
-        action="store_true",
-        help="Display the prompt before sending to LLM and ask for confirmation",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Display the prompt before sending to LLM and ask for confirmation "
+            "(default: True; use --no-show-prompt to disable)"
+        ),
     )
     parser.add_argument(
         "--disable-evaluation",
