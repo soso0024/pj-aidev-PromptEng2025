@@ -17,6 +17,7 @@ from typing import Any, Optional
 import anthropic
 from dotenv import load_dotenv
 from model_utils import get_available_models, get_default_model
+from ollama_client import Ollama
 
 
 # Constants for maintainability
@@ -36,7 +37,7 @@ TRUNCATE_TAIL_LINES = 10  # Lines to show at end when truncating
 class TestCaseGenerator:
     def __init__(
         self,
-        api_key: str,
+        api_key: str = None,
         models: list[str] = None,
         include_docstring: bool = False,
         include_ast: bool = False,
@@ -47,8 +48,8 @@ class TestCaseGenerator:
         config_path: str = "models_config.json",
         ast_fix: bool = False,
     ):
-        """Initialize the test case generator with Claude API client."""
-        self.client = anthropic.Anthropic(api_key=api_key)
+        """Initialize the test case generator with LLM clients."""
+        self.api_key = api_key
         self.problems = []
 
         # Load model configuration from external file
@@ -56,6 +57,9 @@ class TestCaseGenerator:
         self.model_mapping = {
             model: config["api_name"] for model, config in self.config["models"].items()
         }
+
+        # Initialize clients for different providers
+        self.clients = self._initialize_clients()
 
         # Set default model if none provided
         if models is None:
@@ -82,6 +86,43 @@ class TestCaseGenerator:
         self.total_cost = 0.0
         # Whether to include a focused AST snippet in error-fix prompts
         self.ast_fix = ast_fix
+
+    def _initialize_clients(self) -> dict[str, Any]:
+        """Initialize clients for different LLM providers."""
+        clients = {}
+
+        # Check which providers are needed
+        providers_needed = set()
+        for model_config in self.config["models"].values():
+            provider = model_config.get("provider", "anthropic")
+            providers_needed.add(provider)
+
+        # Initialize Anthropic client if needed
+        if "anthropic" in providers_needed:
+            if self.api_key:
+                clients["anthropic"] = anthropic.Anthropic(api_key=self.api_key)
+            else:
+                # Will fail later if trying to use Anthropic models without API key
+                clients["anthropic"] = None
+
+        # Initialize Ollama client if needed
+        if "ollama" in providers_needed:
+            # Find Ollama configuration
+            ollama_base_url = None
+            for model_config in self.config["models"].values():
+                if model_config.get("provider") == "ollama":
+                    ollama_base_url = model_config.get(
+                        "base_url", "http://localhost:11434"
+                    )
+                    break
+            
+            # Allow environment variable override for Ollama base URL
+            ollama_base_url = os.getenv("OLLAMA_BASE_URL", ollama_base_url)
+
+            if ollama_base_url:
+                clients["ollama"] = Ollama(base_url=ollama_base_url)
+
+        return clients
 
     def _load_model_config(self, config_path: str) -> dict[str, Any]:
         """Load model configuration from JSON file."""
@@ -842,7 +883,7 @@ Start your response with "import pytest" and include only executable Python test
         print(f"{'='*80}\n")
 
     def generate_test_cases(self, problem: dict[str, Any], model: str) -> str:
-        """Generate test cases using Claude API."""
+        """Generate test cases using LLM API."""
         prompt = self.generate_prompt(problem)
 
         print(f"Generating test cases for {problem['task_id']} using {model}...")
@@ -853,7 +894,17 @@ Start your response with "import pytest" and include only executable Python test
                 return ""
 
         try:
-            response = self.client.messages.create(
+            # Get the provider for this model
+            provider = self.config["models"][model].get("provider", "anthropic")
+            client = self.clients.get(provider)
+
+            if not client:
+                if provider == "anthropic":
+                    raise ValueError(f"Anthropic API key required for model {model}")
+                else:
+                    raise ValueError(f"Client not initialized for provider {provider}")
+
+            response = client.messages.create(
                 model=self.model_mapping[model],
                 max_tokens=DEFAULT_MAX_TOKENS,
                 temperature=DEFAULT_TEMPERATURE,  # A temperature of 0.0 results in the most deterministic and consistent responses, as the model will consistently choose the most probable words and sequences.
@@ -991,10 +1042,10 @@ Start your response with "import pytest" and include only executable Python test
 
         # Get function info based on include_docstring flag
         if self.include_docstring:
-            function_info = problem['prompt']
+            function_info = problem["prompt"]
         else:
             function_info = self.extract_function_signature(
-                problem['prompt'], problem['entry_point']
+                problem["prompt"], problem["entry_point"]
             )
 
         return f"""The following test code has errors when running pytest. Please fix the issues and return ONLY the corrected Python code, no explanations or markdown.
@@ -1056,7 +1107,17 @@ Corrected code:"""
         try:
             print(f"🤖 Sending fix request to LLM (attempt {attempt}) using {model}...")
 
-            response = self.client.messages.create(
+            # Get the provider for this model
+            provider = self.config["models"][model].get("provider", "anthropic")
+            client = self.clients.get(provider)
+
+            if not client:
+                if provider == "anthropic":
+                    raise ValueError(f"Anthropic API key required for model {model}")
+                else:
+                    raise ValueError(f"Client not initialized for provider {provider}")
+
+            response = client.messages.create(
                 model=self.model_mapping[model],
                 max_tokens=3000,
                 temperature=0.0,
@@ -1379,11 +1440,33 @@ def main():
 
     # Get API key from argument, environment, or .env file
     api_key = args.api_key or os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        print("Error: Please provide Claude API key via:")
+
+    # Check if we need an API key (only for Anthropic models)
+    try:
+        with open("models_config.json", "r") as f:
+            models_config = json.load(f)
+    except FileNotFoundError:
+        print("Error: models_config.json not found.")
+        return 1
+    except json.JSONDecodeError:
+        print("Error: models_config.json contains invalid JSON.")
+        return 1
+    
+    selected_models = args.models if args.models else [models_config["default_model"]]
+
+    # Check if any selected model requires Anthropic API
+    needs_anthropic = any(
+        models_config["models"][model].get("provider", "anthropic") == "anthropic"
+        for model in selected_models
+    )
+
+    if needs_anthropic and not api_key:
+        print("Error: Anthropic models selected but no API key provided.")
+        print("Please provide Claude API key via:")
         print("  1. --api-key argument")
         print("  2. ANTHROPIC_API_KEY environment variable")
         print("  3. Set ANTHROPIC_API_KEY in .env file")
+        print("\nOr use Ollama models which don't require an API key.")
         return 1
 
     try:
