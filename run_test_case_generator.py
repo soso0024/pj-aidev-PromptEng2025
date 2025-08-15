@@ -673,17 +673,14 @@ Start your response with "import pytest" and include only executable Python test
         print("=" * 80)
 
         while True:
-            response = input("\nProceed with this prompt? (y/n/q): ").lower().strip()
+            response = input("\nProceed with this prompt? (y/n): ").lower().strip()
             if response in ["y", "yes"]:
                 return True
             elif response in ["n", "no"]:
-                print("Prompt rejected. Exiting...")
-                return False
-            elif response in ["q", "quit"]:
-                print("Quitting...")
+                print("Cancelled. Exiting...")
                 return False
             else:
-                print("Please enter 'y' (yes), 'n' (no), or 'q' (quit)")
+                print("Please enter 'y' (yes) or 'n' (no)")
 
     def calculate_cost(
         self, input_tokens: int, output_tokens: int, model: str
@@ -841,7 +838,7 @@ Start your response with "import pytest" and include only executable Python test
         if self.show_prompt:
             while True:
                 response = (
-                    input(f"\nProceed with fix attempt {attempt}? (y/n/q): ")
+                    input(f"\nProceed with fix attempt {attempt}? (y/n): ")
                     .lower()
                     .strip()
                 )
@@ -850,11 +847,8 @@ Start your response with "import pytest" and include only executable Python test
                 elif response in ["n", "no"]:
                     print("Skipping fix attempt...")
                     return False
-                elif response in ["q", "quit"]:
-                    print("Quitting evaluation...")
-                    return False
                 else:
-                    print("Please enter 'y' (yes), 'n' (no), or 'q' (quit)")
+                    print("Please enter 'y' (yes) or 'n' (no)")
 
         return True
 
