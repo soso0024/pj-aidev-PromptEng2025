@@ -1224,7 +1224,7 @@ Corrected code:"""
                 print("Final error output:")
                 print(error_output)
 
-        return False, self.max_pytest_runs, final_coverage
+        return False, self.max_pytest_runs - 1, final_coverage
 
     def _generate_and_evaluate_test_cases(
         self, problem: dict[str, Any], output_dir: str = "generated_tests"
