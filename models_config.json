@@ -1,8 +1,17 @@
 {
   "models": {
-    "claude-3-5-sonnet-20241022": {
-      "api_name": "claude-3-5-sonnet-20241022",
-      "folder_name": "claude-3-5-sonnet",
+    "claude-sonnet-4-20250514": {
+      "api_name": "claude-sonnet-4-20250514",
+      "folder_name": "claude-4-sonnet",
+      "provider": "anthropic",
+      "pricing": {
+        "input_per_1k": 0.003,
+        "output_per_1k": 0.015
+      }
+    },
+    "claude-3-7-sonnet-20250219": {
+      "api_name": "claude-3-7-sonnet-20250219",
+      "folder_name": "claude-3-7-sonnet",
       "provider": "anthropic",
       "pricing": {
         "input_per_1k": 0.003,
