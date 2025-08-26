@@ -21,3 +21,5 @@ wheels/
 htmlcov/
 
 CLAUDE.md
+
+.DS_Store
