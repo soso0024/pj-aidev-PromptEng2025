@@ -108,6 +108,8 @@ class TraditionalPlots:
         ax1.set_xlabel("Configuration Type")
         ax1.set_ylabel("Code Coverage (%)")
         ax1.tick_params(axis="x", rotation=45)
+        # Code coverage ranges from 0-100%
+        ax1.set_ylim(0, 100)
 
         # Bar plot of mean coverage
         coverage_stats = (
@@ -155,6 +157,8 @@ class TraditionalPlots:
         ax1.set_xlabel("Configuration Type")
         ax1.set_ylabel("Total Cost (USD)")
         ax1.tick_params(axis="x", rotation=45)
+        # Cost cannot be negative
+        ax1.set_ylim(bottom=0)
 
         # Average cost bar plot
         cost_stats = (
@@ -200,6 +204,8 @@ class TraditionalPlots:
         ax1.set_xlabel("Configuration Type")
         ax1.set_ylabel("Fix Attempts Used")
         ax1.tick_params(axis="x", rotation=45)
+        # Fix attempts cannot be negative
+        ax1.set_ylim(bottom=0)
 
         # Average fix attempts
         fix_stats = (
@@ -284,6 +290,9 @@ class TraditionalPlots:
         ax.set_title("Cost vs Code Coverage by Configuration", fontweight="bold")
         ax.set_xlabel("Total Cost (USD)")
         ax.set_ylabel("Code Coverage (%)")
+        # Both cost and coverage should be non-negative
+        ax.set_xlim(left=0)
+        ax.set_ylim(0, 100)  # Coverage is 0-100%
         ax.legend()
         ax.grid(True, alpha=0.3)
 
@@ -317,6 +326,8 @@ class TraditionalPlots:
         ax1.set_xlabel("Configuration Type")
         ax1.set_ylabel("Input Tokens")
         ax1.tick_params(axis="x", rotation=45)
+        # Set y-axis to start at 0 since tokens can't be negative
+        ax1.set_ylim(bottom=0)
 
         # Bar plot for average
         token_stats = (
@@ -335,6 +346,8 @@ class TraditionalPlots:
         ax2.set_xlabel("Configuration Type")
         ax2.set_ylabel("Average Input Tokens")
         ax2.tick_params(axis="x", rotation=45)
+        # Set y-axis to start at 0 for consistency
+        ax2.set_ylim(bottom=0)
 
         # Add value labels
         for bar, mean, count in zip(bars, token_stats["mean"], token_stats["count"]):
