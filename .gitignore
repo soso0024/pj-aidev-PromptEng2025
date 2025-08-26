@@ -23,3 +23,6 @@ htmlcov/
 CLAUDE.md
 
 .DS_Store
+
+# Workflows
+.github/workflows/black_formatter.yml
