@@ -329,6 +329,9 @@ class DatasetAwarePlots:
         ax1.set_title("Cost vs Problem Complexity Score", fontweight="bold")
         ax1.set_xlabel("Complexity Score")
         ax1.set_ylabel("Total Cost (USD)")
+        # Both complexity score and cost should be non-negative
+        ax1.set_xlim(left=0)
+        ax1.set_ylim(bottom=0)
         ax1.legend()
         ax1.grid(True, alpha=0.3)
 
@@ -356,6 +359,8 @@ class DatasetAwarePlots:
             ax2.set_title("Cost Distribution by Complexity Level", fontweight="bold")
             ax2.set_xlabel("Problem Complexity Level")
             ax2.set_ylabel("Total Cost (USD)")
+            # Cost cannot be negative
+            ax2.set_ylim(bottom=0)
             ax2.legend(
                 title="Configuration", bbox_to_anchor=(1.05, 1), loc="upper left"
             )
