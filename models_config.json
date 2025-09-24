@@ -36,19 +36,9 @@
         "output_per_1k": 0.00125
       }
     },
-    "ollama-deepseek": {
-      "api_name": "deepseek-r1:1.5b",
-      "folder_name": "ollama-deepseek",
-      "provider": "ollama",
-      "base_url": "http://localhost:11434",
-      "pricing": {
-        "input_per_1k": 0.0,
-        "output_per_1k": 0.0
-      }
-    },
-    "ollama-phi3": {
-      "api_name": "phi3:3.8b",
-      "folder_name": "ollama-phi3",
+    "ollama-gpt-oss": {
+      "api_name": "gpt-oss:20b",
+      "folder_name": "ollama-gpt-oss",
       "provider": "ollama",
       "base_url": "http://localhost:11434",
       "pricing": {
@@ -57,5 +47,5 @@
       }
     }
   },
-  "default_model": "ollama-phi3"
+  "default_model": "ollama-gpt-oss"
 }
