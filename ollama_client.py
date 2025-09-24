@@ -92,10 +92,7 @@ class Messages:
 
             # Token counting for Ollama (simplified since it's free)
             # We just return 0 for both since Ollama is free and we don't need accurate counts
-            usage = Usage(
-                input_tokens=0,
-                output_tokens=0
-            )
+            usage = Usage(input_tokens=0, output_tokens=0)
 
             content = [MessageContent(text=generated_text)]
 
@@ -105,15 +102,15 @@ class Messages:
             raise Exception(f"Ollama API request failed: {str(e)}") from e
         except json.JSONDecodeError as e:
             raise Exception(f"Failed to parse Ollama response: {str(e)}") from e
-    
+
     def _convert_messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:
         """Convert chat messages to a single prompt string."""
         prompt_parts = []
-        
+
         for message in messages:
             role = message.get("role")
             content = message.get("content", "")
-            
+
             if role and content:
                 # Include role information for better context
                 if role == "system":
@@ -122,17 +119,17 @@ class Messages:
                     prompt_parts.append(f"Human: {content}")
                 elif role == "assistant":
                     prompt_parts.append(f"Assistant: {content}")
-        
+
         if not prompt_parts:
             return ""
-        
+
         # Join all messages with newlines for context
         full_prompt = "\n\n".join(prompt_parts)
-        
+
         # Add a final prompt indicator if the last message was from user
         if messages and messages[-1].get("role") == "user":
             full_prompt += "\n\nAssistant:"
-        
+
         return full_prompt
 
 
@@ -147,7 +144,7 @@ class Ollama:
         """
         self.base_url = base_url
         self.messages = Messages(base_url)
-        
+
     def test_connection(self) -> bool:
         """Test if Ollama server is accessible."""
         try:
@@ -155,7 +152,7 @@ class Ollama:
             return response.status_code == 200
         except requests.exceptions.RequestException:
             return False
-    
+
     def list_models(self) -> List[str]:
         """List available models on the Ollama server."""
         try:
