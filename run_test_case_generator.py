@@ -917,7 +917,7 @@ Start your response with "import pytest" and include only executable Python test
             return self.clean_generated_code(raw_response)
 
         except Exception as e:
-            print(f"Error generating test cases: {e}")
+            print(f"❌ Error generating test cases with {model}: {e}")
             return ""
 
     def save_test_cases(
