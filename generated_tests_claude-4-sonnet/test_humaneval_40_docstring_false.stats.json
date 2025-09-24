@@ -1,0 +1,13 @@
+{
+  "total_input_tokens": 9574,
+  "total_output_tokens": 2550,
+  "total_tokens": 12124,
+  "total_cost_usd": 0.066972,
+  "task_id": "HumanEval/40",
+  "generated_file": "generated_tests_claude-4-sonnet/test_humaneval_40_docstring_false.py",
+  "evaluation_enabled": true,
+  "evaluation_success": false,
+  "fix_attempts_used": 2,
+  "max_pytest_runs": 3,
+  "code_coverage_percent": 83.0
+}
