@@ -1023,7 +1023,14 @@ Start your response with "import pytest" and include only executable Python test
     ) -> str:
         """Generate a prompt to fix test case errors with white box testing approach."""
         ast_section = ""
-        if self.ast_fix and ast_snippet:
+        if self.include_ast:
+            # Include full AST representation like in initial prompt
+            ast_repr = self.generate_ast_string(
+                problem["canonical_solution"], problem["prompt"], problem["entry_point"]
+            )
+            ast_section = f"\n\nAST representation of canonical solution:\n```\n{ast_repr}\n```\n"
+        elif self.ast_fix and ast_snippet:
+            # Include relevant AST snippet if ast_fix is enabled but not full AST
             ast_section = f"\n\nRELEVANT AST SNIPPET OF FUNCTION (focus on error):\n```\n{ast_snippet}\n```\n"
 
         # Distinguish between pytest attempts and fix attempts for clarity in the prompt
