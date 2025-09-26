@@ -26,3 +26,7 @@ CLAUDE.md
 
 # Workflows
 .github/workflows/black_formatter.yml
+
+claude-3-haiku_viz
+claude-3-5-haiku_viz
+claude-4-sonnet_viz
