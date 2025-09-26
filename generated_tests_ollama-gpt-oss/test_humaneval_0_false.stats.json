@@ -1,0 +1,13 @@
+{
+  "total_input_tokens": 0,
+  "total_output_tokens": 0,
+  "total_tokens": 0,
+  "total_cost_usd": 0.0,
+  "task_id": "HumanEval/0",
+  "generated_file": "generated_tests_ollama-gpt-oss/test_humaneval_0_false.py",
+  "evaluation_enabled": true,
+  "evaluation_success": false,
+  "fix_attempts_used": 2,
+  "max_pytest_runs": 3,
+  "code_coverage_percent": 0.0
+}
