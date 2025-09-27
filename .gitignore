@@ -1,5 +1,9 @@
 # Environment variables
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Generated test files
 # generated_tests/
@@ -20,6 +24,7 @@ wheels/
 .coverage
 htmlcov/
 
+# Documentation
 CLAUDE.md
 
 .DS_Store
@@ -27,6 +32,12 @@ CLAUDE.md
 # Workflows
 .github/workflows/black_formatter.yml
 
+# Visualizations
 claude-3-haiku_viz
 claude-3-5-haiku_viz
 claude-4-sonnet_viz
+
+# Generated test files
+generated_tests_claude-3-haiku/
+generated_tests_claude-3-5-haiku/
+generated_tests_claude-4-sonnet/
