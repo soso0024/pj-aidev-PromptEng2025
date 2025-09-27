@@ -32,6 +32,9 @@ DEFAULT_TEMPERATURE = 0.0  # Temperature for deterministic responses
 DISPLAY_LINE_LIMIT = 20  # Max lines to display without truncation
 TRUNCATE_HEAD_LINES = 10  # Lines to show at start when truncating
 TRUNCATE_TAIL_LINES = 10  # Lines to show at end when truncating
+GENERATED_TEST_MARKER = (
+    "# Generated test cases:\n"  # Marker for generated test code section
+)
 
 
 class TestCaseGenerator:
@@ -340,7 +343,7 @@ class TestCaseGenerator:
             )
             if not signature:
                 # Fallback minimal signature
-                if entry_point:
+                if entry_point and entry_point.strip():
                     signature = f"def {entry_point}(*args, **kwargs):"
                 else:
                     signature = "def _func(*args, **kwargs):"
@@ -1045,12 +1048,12 @@ Start your response with "import pytest" and include only executable Python test
             function_info = problem.get("prompt", "")
         else:
             entry_point = problem.get("entry_point")
-            if entry_point:
+            if entry_point and entry_point.strip():
                 function_info = self.extract_function_signature(
                     problem.get("prompt", ""), entry_point
                 )
             else:
-                # Fallback gracefully when entry_point is missing in problem dict
+                # Fallback gracefully when entry_point is missing or empty in problem dict
                 function_info = problem.get("prompt", "")
 
         return f"""The following test code has errors when running pytest. Please fix the issues and return ONLY the corrected Python code, no explanations or markdown.
@@ -1192,11 +1195,11 @@ Corrected code:"""
                 with open(test_file_path, "r", encoding="utf-8") as f:
                     current_content = f.read()
 
-                # Extract just the test code part (after "# Generated test cases:")
-                test_code_start = current_content.find("# Generated test cases:\n")
+                # Extract just the test code part (after generated test marker)
+                test_code_start = current_content.find(GENERATED_TEST_MARKER)
                 if test_code_start != -1:
                     test_code = current_content[
-                        test_code_start + len("# Generated test cases:\n") :
+                        test_code_start + len(GENERATED_TEST_MARKER) :
                     ]
                 else:
                     test_code = current_content
@@ -1219,9 +1222,7 @@ Corrected code:"""
 """
                 )
 
-                updated_content = (
-                    base_content + "# Generated test cases:\n" + fixed_code
-                )
+                updated_content = base_content + GENERATED_TEST_MARKER + fixed_code
 
                 with open(test_file_path, "w", encoding="utf-8") as f:
                     f.write(updated_content)
