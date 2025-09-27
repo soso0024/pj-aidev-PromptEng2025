@@ -580,7 +580,7 @@ AST representation of canonical solution:
 
 {signature_section}Canonical implementation:
 ```python
-def {problem['entry_point']}({problem['prompt'].split('def ' + problem['entry_point'] + '(')[1].split(')')[0]}):
+{self.extract_function_signature(problem['prompt'], problem['entry_point'])}
 {problem['canonical_solution']}
 ```{ast_section}
 
@@ -1028,7 +1028,9 @@ Start your response with "import pytest" and include only executable Python test
             ast_repr = self.generate_ast_string(
                 problem["canonical_solution"], problem["prompt"], problem["entry_point"]
             )
-            ast_section = f"\n\nAST representation of canonical solution:\n```\n{ast_repr}\n```\n"
+            ast_section = (
+                f"\n\nAST representation of canonical solution:\n```\n{ast_repr}\n```\n"
+            )
         elif self.ast_fix and ast_snippet:
             # Include relevant AST snippet if ast_fix is enabled but not full AST
             ast_section = f"\n\nRELEVANT AST SNIPPET OF FUNCTION (focus on error):\n```\n{ast_snippet}\n```\n"
