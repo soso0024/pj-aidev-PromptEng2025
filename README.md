@@ -8,7 +8,6 @@ A Python tool that automatically generates comprehensive pytest test cases for H
 - **Automatic test evaluation**: Runs pytest and fixes errors using LLM feedback
 - **Batch processing**: Generate tests for multiple problems at once
 - **Comprehensive analysis**: Visualizations and statistics for different configurations
-- **AST-based error fixing**: Enhanced error fixing with code structure analysis
 - **Cost tracking**: Token usage and API cost monitoring
 - **Code coverage analysis**: Tracks test coverage percentages
 
@@ -72,8 +71,6 @@ python run_test_case_generator.py --include-docstring
 # Include AST representation
 python run_test_case_generator.py --include-ast
 
-# Enable AST-based error fixing
-python run_test_case_generator.py --ast-fix
 ```
 
 ### Command Line Options
@@ -90,7 +87,6 @@ python run_test_case_generator.py --ast-fix
 | `--disable-evaluation` | Skip automatic evaluation         | `False`                   |
 | `--max-pytest-runs`    | Max pytest runs (initial + fixes) | `3`                       |
 | `--quiet-evaluation`   | Less verbose output               | `False`                   |
-| `--ast-fix`            | Enable AST-based error fixing     | `False`                   |
 
 ### Batch Processing
 
