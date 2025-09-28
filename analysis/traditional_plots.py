@@ -196,18 +196,7 @@ class TraditionalPlots:
 
     def _plot_fix_attempts(self, output_path: Path) -> None:
         """Plot fix attempts needed by configuration type."""
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-
-        # Box plot
-        sns.boxplot(
-            data=self.df, x="config_type_display", y="fix_attempts_used", ax=ax1
-        )
-        ax1.set_title("Fix Attempts Distribution by Configuration", fontweight="bold")
-        ax1.set_xlabel("Configuration Type")
-        ax1.set_ylabel("Fix Attempts Used")
-        ax1.tick_params(axis="x", rotation=45)
-        # Fix attempts cannot be negative
-        ax1.set_ylim(bottom=0)
+        fig, ax = plt.subplots(figsize=(10, 6))
 
         # Average fix attempts
         fix_stats = (
@@ -216,20 +205,22 @@ class TraditionalPlots:
             .reset_index()
         )
         fix_stats = fix_stats.sort_values("config_type_display")
-        bars = ax2.bar(
+        bars = ax.bar(
             fix_stats["config_type_display"],
             fix_stats["mean"],
             yerr=fix_stats["std"],
             capsize=5,
         )
-        ax2.set_title("Average Fix Attempts by Configuration", fontweight="bold")
-        ax2.set_xlabel("Configuration Type")
-        ax2.set_ylabel("Average Fix Attempts")
-        ax2.tick_params(axis="x", rotation=45)
+        ax.set_title("Average Fix Attempts by Configuration", fontweight="bold")
+        ax.set_xlabel("Configuration Type")
+        ax.set_ylabel("Average Fix Attempts")
+        ax.tick_params(axis="x", rotation=45)
+        # Fix attempts cannot be negative - set y-axis to start from 0
+        ax.set_ylim(bottom=0)
 
         # Add value labels
         for bar, mean, count in zip(bars, fix_stats["mean"], fix_stats["count"]):
-            ax2.text(
+            ax.text(
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + 0.05,
                 f"{mean:.2f}\n(n={count})",
