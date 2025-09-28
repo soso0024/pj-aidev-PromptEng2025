@@ -2,7 +2,7 @@
 """
 Traditional Plotting Module
 
-Contains the original 7 visualization methods for analyzing test generation
+Contains the original 5 visualization methods for analyzing test generation
 results across different configuration types.
 """
 
@@ -15,7 +15,7 @@ import numpy as np
 
 
 class TraditionalPlots:
-    """Handles the original 7 visualization methods for test result analysis."""
+    """Handles the original 5 visualization methods for test result analysis."""
 
     def __init__(self, data: List[Dict[str, Any]], config_order: List[str]):
         """Initialize with loaded data and configuration order."""
@@ -49,12 +49,6 @@ class TraditionalPlots:
 
         self._plot_fix_attempts(output_path)
         print("  ✓ Created fix attempts analysis")
-
-        self._plot_success_by_problem(output_path)
-        print("  ✓ Created success by problem heatmap")
-
-        self._plot_cost_vs_quality(output_path)
-        print("  ✓ Created cost vs quality scatter plot")
 
         self._plot_input_tokens(output_path)
         print("  ✓ Created input token analysis")
@@ -98,18 +92,7 @@ class TraditionalPlots:
 
     def _plot_code_coverage(self, output_path: Path) -> None:
         """Plot code coverage by configuration type."""
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-
-        # Box plot
-        sns.boxplot(
-            data=self.df, x="config_type_display", y="code_coverage_percent", ax=ax1
-        )
-        ax1.set_title("Code Coverage Distribution by Configuration", fontweight="bold")
-        ax1.set_xlabel("Configuration Type")
-        ax1.set_ylabel("Code Coverage (%)")
-        ax1.tick_params(axis="x", rotation=45)
-        # Code coverage ranges from 0-100%
-        ax1.set_ylim(0, 100)
+        fig, ax = plt.subplots(figsize=(10, 6))
 
         # Bar plot of mean coverage
         coverage_stats = (
@@ -120,22 +103,24 @@ class TraditionalPlots:
             .reset_index()
         )
         coverage_stats = coverage_stats.sort_values("config_type_display")
-        bars = ax2.bar(
+        bars = ax.bar(
             coverage_stats["config_type_display"],
             coverage_stats["mean"],
             yerr=coverage_stats["std"],
             capsize=5,
         )
-        ax2.set_title("Average Code Coverage by Configuration", fontweight="bold")
-        ax2.set_xlabel("Configuration Type")
-        ax2.set_ylabel("Average Code Coverage (%)")
-        ax2.tick_params(axis="x", rotation=45)
+        ax.set_title("Average Code Coverage by Configuration", fontweight="bold")
+        ax.set_xlabel("Configuration Type")
+        ax.set_ylabel("Average Code Coverage (%)")
+        ax.tick_params(axis="x", rotation=45)
+        # Code coverage ranges from 0-100%
+        ax.set_ylim(0, 100)
 
         # Add value labels
         for bar, mean, count in zip(
             bars, coverage_stats["mean"], coverage_stats["count"]
         ):
-            ax2.text(
+            ax.text(
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + 1,
                 f"{mean:.1f}%\n(n={count})",
@@ -149,16 +134,7 @@ class TraditionalPlots:
 
     def _plot_cost_analysis(self, output_path: Path) -> None:
         """Plot cost analysis by configuration type."""
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-
-        # Total cost box plot
-        sns.boxplot(data=self.df, x="config_type_display", y="total_cost_usd", ax=ax1)
-        ax1.set_title("Total Cost Distribution by Configuration", fontweight="bold")
-        ax1.set_xlabel("Configuration Type")
-        ax1.set_ylabel("Total Cost (USD)")
-        ax1.tick_params(axis="x", rotation=45)
-        # Cost cannot be negative
-        ax1.set_ylim(bottom=0)
+        fig, ax = plt.subplots(figsize=(10, 6))
 
         # Average cost bar plot
         cost_stats = (
@@ -167,22 +143,22 @@ class TraditionalPlots:
             .reset_index()
         )
         cost_stats = cost_stats.sort_values("config_type_display")
-        bars = ax2.bar(
+        bars = ax.bar(
             cost_stats["config_type_display"],
             cost_stats["mean"],
             yerr=cost_stats["std"],
             capsize=5,
         )
-        ax2.set_title("Average Total Cost by Configuration", fontweight="bold")
-        ax2.set_xlabel("Configuration Type")
-        ax2.set_ylabel("Average Total Cost (USD)")
-        ax2.tick_params(axis="x", rotation=45)
+        ax.set_title("Average Total Cost by Configuration", fontweight="bold")
+        ax.set_xlabel("Configuration Type")
+        ax.set_ylabel("Average Total Cost (USD)")
+        ax.tick_params(axis="x", rotation=45)
         # Cost cannot be negative - set y-axis to start from 0
-        ax2.set_ylim(bottom=0)
+        ax.set_ylim(bottom=0)
 
         # Add value labels
         for bar, mean, count in zip(bars, cost_stats["mean"], cost_stats["count"]):
-            ax2.text(
+            ax.text(
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + 0.001,
                 f"${mean:.4f}\n(n={count})",
@@ -232,95 +208,9 @@ class TraditionalPlots:
         plt.savefig(output_path / "4_fix_attempts.png", dpi=300, bbox_inches="tight")
         plt.close()
 
-    def _plot_success_by_problem(self, output_path: Path) -> None:
-        """Plot success rate by problem ID across configurations."""
-        fig, ax = plt.subplots(figsize=(15, 8))
-
-        # Create pivot table for heatmap
-        pivot_data = self.df.pivot_table(
-            values="success",
-            index="problem_id",
-            columns="config_type_display",
-            aggfunc="mean",
-            fill_value=0,
-            observed=False,
-        )
-
-        # Create heatmap
-        sns.heatmap(
-            pivot_data,
-            annot=True,
-            fmt=".2f",
-            cmap="RdYlGn",
-            ax=ax,
-            cbar_kws={"label": "Success Rate"},
-        )
-        ax.set_title("Success Rate by Problem ID and Configuration", fontweight="bold")
-        ax.set_xlabel("Configuration Type")
-        ax.set_ylabel("Problem ID")
-
-        plt.tight_layout()
-        plt.savefig(
-            output_path / "5_success_by_problem.png", dpi=300, bbox_inches="tight"
-        )
-        plt.close()
-
-    def _plot_cost_vs_quality(self, output_path: Path) -> None:
-        """Plot cost vs quality (coverage) scatter plot."""
-        fig, ax = plt.subplots(figsize=(12, 8))
-
-        # Create scatter plot with different colors for each config type
-        for config_type in self.df["config_type_display"].unique():
-            data = self.df[self.df["config_type_display"] == config_type]
-            ax.scatter(
-                data["total_cost_usd"],
-                data["code_coverage_percent"],
-                label=config_type,
-                alpha=0.7,
-                s=60,
-            )
-
-        ax.set_title("Cost vs Code Coverage by Configuration", fontweight="bold")
-        ax.set_xlabel("Total Cost (USD)")
-        ax.set_ylabel("Code Coverage (%)")
-        # Both cost and coverage should be non-negative
-        ax.set_xlim(left=0)
-        ax.set_ylim(0, 100)  # Coverage is 0-100%
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-
-        # Add trend line
-        if len(self.df) > 1:
-            z = np.polyfit(
-                self.df["total_cost_usd"], self.df["code_coverage_percent"], 1
-            )
-            p = np.poly1d(z)
-            ax.plot(
-                self.df["total_cost_usd"],
-                p(self.df["total_cost_usd"]),
-                "r--",
-                alpha=0.8,
-                linewidth=1,
-            )
-
-        plt.tight_layout()
-        plt.savefig(output_path / "6_cost_vs_quality.png", dpi=300, bbox_inches="tight")
-        plt.close()
-
     def _plot_input_tokens(self, output_path: Path) -> None:
         """Plot input token usage by configuration type."""
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-
-        # Box plot for distribution
-        sns.boxplot(
-            data=self.df, x="config_type_display", y="total_input_tokens", ax=ax1
-        )
-        ax1.set_title("Input Token Distribution by Configuration", fontweight="bold")
-        ax1.set_xlabel("Configuration Type")
-        ax1.set_ylabel("Input Tokens")
-        ax1.tick_params(axis="x", rotation=45)
-        # Set y-axis to start at 0 since tokens can't be negative
-        ax1.set_ylim(bottom=0)
+        fig, ax = plt.subplots(figsize=(10, 6))
 
         # Bar plot for average
         token_stats = (
@@ -329,22 +219,22 @@ class TraditionalPlots:
             .reset_index()
         )
         token_stats = token_stats.sort_values("config_type_display")
-        bars = ax2.bar(
+        bars = ax.bar(
             token_stats["config_type_display"],
             token_stats["mean"],
             yerr=token_stats["std"],
             capsize=5,
         )
-        ax2.set_title("Average Input Tokens by Configuration", fontweight="bold")
-        ax2.set_xlabel("Configuration Type")
-        ax2.set_ylabel("Average Input Tokens")
-        ax2.tick_params(axis="x", rotation=45)
+        ax.set_title("Average Input Tokens by Configuration", fontweight="bold")
+        ax.set_xlabel("Configuration Type")
+        ax.set_ylabel("Average Input Tokens")
+        ax.tick_params(axis="x", rotation=45)
         # Set y-axis to start at 0 for consistency
-        ax2.set_ylim(bottom=0)
+        ax.set_ylim(bottom=0)
 
         # Add value labels
         for bar, mean, count in zip(bars, token_stats["mean"], token_stats["count"]):
-            ax2.text(
+            ax.text(
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + 50,
                 f"{mean:.0f}\n(n={count})",
@@ -353,5 +243,5 @@ class TraditionalPlots:
             )
 
         plt.tight_layout()
-        plt.savefig(output_path / "7_input_tokens.png", dpi=300, bbox_inches="tight")
+        plt.savefig(output_path / "5_input_tokens.png", dpi=300, bbox_inches="tight")
         plt.close()

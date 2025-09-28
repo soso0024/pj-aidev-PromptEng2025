@@ -2,7 +2,7 @@
 """
 Dataset-Aware Plotting Module
 
-Contains the 5 enhanced visualization methods that analyze test generation
+Contains the 6 enhanced visualization methods that analyze test generation
 results by problem complexity and algorithm types.
 """
 
@@ -14,7 +14,7 @@ import seaborn as sns
 
 
 class DatasetAwarePlots:
-    """Handles the 5 dataset-aware visualization methods for test result analysis."""
+    """Handles the 6 dataset-aware visualization methods for test result analysis."""
 
     def __init__(
         self,
@@ -58,6 +58,9 @@ class DatasetAwarePlots:
         self._plot_algorithm_type_distribution(output_path)
         print("  ✓ Created algorithm type distribution analysis")
 
+        self._plot_algorithm_success_rates(output_path)
+        print("  ✓ Created algorithm success rates analysis")
+
     def _plot_success_by_complexity(self, output_path: Path) -> None:
         """Plot success rate by problem complexity level."""
         if "complexity_level" not in self.df.columns:
@@ -66,7 +69,7 @@ class DatasetAwarePlots:
             )
             return
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+        fig, ax = plt.subplots(figsize=(10, 6))
 
         # Success rate by complexity level
         complexity_order = ["simple", "medium", "complex"]
@@ -78,41 +81,6 @@ class DatasetAwarePlots:
             categories=complexity_order,
             ordered=True,
         )
-
-        success_by_complexity = (
-            complexity_data.groupby(
-                ["complexity_level", "config_type_display"], observed=False
-            )["success"]
-            .agg(["mean", "count"])
-            .reset_index()
-        )
-        success_by_complexity["success_rate"] = success_by_complexity["mean"] * 100
-
-        # Pivot for grouped bar chart
-        pivot_success = success_by_complexity.pivot(
-            index="complexity_level",
-            columns="config_type_display",
-            values="success_rate",
-        ).fillna(0)
-
-        if not pivot_success.empty and len(pivot_success.columns) > 0:
-            pivot_success.plot(kind="bar", ax=ax1, width=0.8)
-        else:
-            ax1.text(
-                0.5,
-                0.5,
-                "No classified complexity data available",
-                ha="center",
-                va="center",
-                transform=ax1.transAxes,
-            )
-        ax1.set_title(
-            "Success Rate by Problem Complexity and Configuration", fontweight="bold"
-        )
-        ax1.set_xlabel("Problem Complexity Level")
-        ax1.set_ylabel("Success Rate (%)")
-        ax1.legend(title="Configuration", bbox_to_anchor=(1.05, 1), loc="upper left")
-        ax1.set_xticklabels(ax1.get_xticklabels(), rotation=0)
 
         # Heatmap of success rate
         if not complexity_data.empty:
@@ -131,34 +99,34 @@ class DatasetAwarePlots:
                     annot=True,
                     fmt=".2f",
                     cmap="RdYlGn",
-                    ax=ax2,
+                    ax=ax,
                     cbar_kws={"label": "Success Rate"},
                 )
             else:
-                ax2.text(
+                ax.text(
                     0.5,
                     0.5,
                     "No classified complexity data available",
                     ha="center",
                     va="center",
-                    transform=ax2.transAxes,
+                    transform=ax.transAxes,
                 )
         else:
-            ax2.text(
+            ax.text(
                 0.5,
                 0.5,
                 "No classified complexity data available",
                 ha="center",
                 va="center",
-                transform=ax2.transAxes,
+                transform=ax.transAxes,
             )
-        ax2.set_title("Success Rate Heatmap by Complexity", fontweight="bold")
-        ax2.set_xlabel("Configuration Type")
-        ax2.set_ylabel("Problem Complexity Level")
+        ax.set_title("Success Rate Heatmap by Complexity", fontweight="bold")
+        ax.set_xlabel("Configuration Type")
+        ax.set_ylabel("Problem Complexity Level")
 
         plt.tight_layout()
         plt.savefig(
-            output_path / "8_success_by_complexity.png", dpi=300, bbox_inches="tight"
+            output_path / "6_success_by_complexity.png", dpi=300, bbox_inches="tight"
         )
         plt.close()
 
@@ -230,7 +198,7 @@ class DatasetAwarePlots:
 
         plt.tight_layout()
         plt.savefig(
-            output_path / "9_success_by_algorithm_type.png",
+            output_path / "7_success_by_algorithm_type.png",
             dpi=300,
             bbox_inches="tight",
         )
@@ -299,7 +267,7 @@ class DatasetAwarePlots:
 
         plt.tight_layout()
         plt.savefig(
-            output_path / "10_config_performance_by_complexity.png",
+            output_path / "8_config_performance_by_complexity.png",
             dpi=300,
             bbox_inches="tight",
         )
@@ -367,19 +335,19 @@ class DatasetAwarePlots:
 
         plt.tight_layout()
         plt.savefig(
-            output_path / "11_cost_vs_complexity.png", dpi=300, bbox_inches="tight"
+            output_path / "9_cost_vs_complexity.png", dpi=300, bbox_inches="tight"
         )
         plt.close()
 
     def _plot_algorithm_type_distribution(self, output_path: Path) -> None:
-        """Plot distribution and success rates of different algorithm types."""
+        """Plot distribution of different algorithm types."""
         if "algorithm_type" not in self.df.columns:
             print(
                 "Warning: algorithm_type not found in data. Skipping algorithm distribution analysis."
             )
             return
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 8))
+        fig, ax = plt.subplots(figsize=(10, 8))
 
         # Pie chart of algorithm type distribution
         algo_counts = self.df["algorithm_type"].value_counts()
@@ -391,13 +359,31 @@ class DatasetAwarePlots:
         if other_count > 0:
             major_algos["other"] = other_count
 
-        ax1.pie(
+        ax.pie(
             major_algos.values,
             labels=major_algos.index,
             autopct="%1.1f%%",
             startangle=90,
         )
-        ax1.set_title("Distribution of Algorithm Types in Dataset", fontweight="bold")
+        ax.set_title("Distribution of Algorithm Types in Dataset", fontweight="bold")
+
+        plt.tight_layout()
+        plt.savefig(
+            output_path / "10_algorithm_type_distribution.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+        plt.close()
+
+    def _plot_algorithm_success_rates(self, output_path: Path) -> None:
+        """Plot success rates by algorithm type."""
+        if "algorithm_type" not in self.df.columns:
+            print(
+                "Warning: algorithm_type not found in data. Skipping algorithm success rates analysis."
+            )
+            return
+
+        fig, ax = plt.subplots(figsize=(12, 8))
 
         # Success rate by algorithm type (only for types with sufficient data)
         success_by_algo = (
@@ -423,21 +409,21 @@ class DatasetAwarePlots:
         )
 
         if not sufficient_data.empty:
-            bars = ax2.barh(
+            bars = ax.barh(
                 sufficient_data["algorithm_type"], sufficient_data["success_rate"]
             )
-            ax2.set_title(
+            ax.set_title(
                 "Success Rate by Algorithm Type\n(Types with ≥3 samples)",
                 fontweight="bold",
             )
-            ax2.set_xlabel("Success Rate (%)")
-            ax2.set_ylabel("Algorithm Type")
+            ax.set_xlabel("Success Rate (%)")
+            ax.set_ylabel("Algorithm Type")
 
             # Add value labels
             for bar, rate, count in zip(
                 bars, sufficient_data["success_rate"], sufficient_data["count"]
             ):
-                ax2.text(
+                ax.text(
                     bar.get_width() + 1,
                     bar.get_y() + bar.get_height() / 2,
                     f"{rate:.1f}% (n={count})",
@@ -447,7 +433,7 @@ class DatasetAwarePlots:
 
         plt.tight_layout()
         plt.savefig(
-            output_path / "12_algorithm_type_distribution.png",
+            output_path / "11_algorithm_success_rates.png",
             dpi=300,
             bbox_inches="tight",
         )

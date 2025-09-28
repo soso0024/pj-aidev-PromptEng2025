@@ -8,8 +8,8 @@ comparing different configurations (basic, docstring, AST, both).
 This is a refactored version with modular architecture for better maintainability:
 - problem_classifier.py: Dataset classification logic
 - data_loader.py: Data loading and processing
-- traditional_plots.py: Original 7 visualization methods
-- dataset_aware_plots.py: New 5 dataset-aware visualizations
+- traditional_plots.py: Original 5 visualization methods
+- dataset_aware_plots.py: New 6 dataset-aware visualizations
 - analysis_reporter.py: Statistical analysis and reporting
 """
 
@@ -101,16 +101,16 @@ class TestResultsAnalyzer:
         print("=" * 80)
         print(f"Output directory: {output_path}")
 
-        # Create traditional plots (charts 1-7)
+        # Create traditional plots (charts 1-5)
         if self.traditional_plots:
             self.traditional_plots.create_all_plots(output_path)
 
-        # Create dataset-aware plots (charts 8-12)
+        # Create dataset-aware plots (charts 6-11)
         if self.dataset_aware_plots:
             self.dataset_aware_plots.create_all_plots(output_path)
 
         print(f"\n✅ All visualizations saved to '{output_path}/' directory")
-        print(f"Created 12 visualization charts (1-12)")
+        print(f"Created 11 visualization charts (1-11)")
 
     def print_summary_stats(self) -> None:
         """Print comprehensive analysis reports."""
