@@ -177,6 +177,8 @@ class TraditionalPlots:
         ax2.set_xlabel("Configuration Type")
         ax2.set_ylabel("Average Total Cost (USD)")
         ax2.tick_params(axis="x", rotation=45)
+        # Cost cannot be negative - set y-axis to start from 0
+        ax2.set_ylim(bottom=0)
 
         # Add value labels
         for bar, mean, count in zip(bars, cost_stats["mean"], cost_stats["count"]):
