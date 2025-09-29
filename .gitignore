@@ -36,9 +36,16 @@ CLAUDE.md
 claude-3-haiku_viz
 claude-3-5-haiku_viz
 claude-4-sonnet_viz
+claude-opus-4-1_viz
 
 # Generated test files
 generated_tests_claude-3-haiku/
 generated_tests_claude-3-5-haiku/
 generated_tests_claude-4-sonnet/
-generated_tests_ollama-gpt-oss/
+generated_tests_claude-opus-4-1/
+
+# Comparison filesg
+all_comparison/best_model_comparison.png
+all_comparison/comprehensive_summary_table.csv
+all_comparison/comprehensive_summary_table.txt
+all_comparison/input_tokens_comparison.png

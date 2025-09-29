@@ -29,6 +29,20 @@ class DataLoader:
         # Define the desired order for configuration types
         self.config_order = ["basic", "ast", "docstring", "docstring_ast", "ast-fix"]
 
+    def extract_model_from_path(self, file_path: Path) -> str:
+        """Extract model information from the file path.
+        Examples:
+        - generated_tests_claude-3-5-haiku/file.json -> claude-3-5-haiku
+        - generated_tests_claude-4-sonnet/file.json -> claude-4-sonnet
+        - generated_tests/file.json -> unknown
+        """
+        parts = file_path.parts
+        for part in parts:
+            if part.startswith("generated_tests_"):
+                model_name = part.replace("generated_tests_", "")
+                return model_name
+        return "unknown"
+
     def parse_filename(self, filename: str) -> Dict[str, Any]:
         """Parse configuration information from filename.
         Examples:
@@ -86,24 +100,55 @@ class DataLoader:
         # First load problem classifications
         self.classifier.load_problem_classifications()
 
-        print(f"Loading data from {self.results_dir}...")
-        stats_files = list(self.results_dir.glob("*.stats.json"))
-        print(f"Found {len(stats_files)} stats files")
+        # Determine search strategy based on the specified results directory
+        search_paths = []
 
-        for stats_file in stats_files:
+        # Check if user specified a specific model directory
+        if self.results_dir.name.startswith("generated_tests_"):
+            # User specified a specific model directory, only load from that
+            search_paths = [self.results_dir]
+            print(f"Loading data from specific model directory: {self.results_dir}")
+        elif self.results_dir.name == "generated_tests":
+            # User specified generic directory, look for all model-specific directories
+            search_paths = [self.results_dir]
+            base_dir = self.results_dir.parent
+            for path in base_dir.glob("generated_tests_*"):
+                if path.is_dir():
+                    search_paths.append(path)
+            print(
+                f"Loading data from {len(search_paths)} directories (including model-specific ones)..."
+            )
+        else:
+            # Default: just use the specified directory
+            search_paths = [self.results_dir]
+            print(f"Loading data from specified directory: {self.results_dir}")
+
+        all_stats_files = []
+
+        for search_path in search_paths:
+            stats_files = list(search_path.glob("*.stats.json"))
+            all_stats_files.extend(stats_files)
+            print(f"  Found {len(stats_files)} stats files in {search_path}")
+
+        print(f"Total found {len(all_stats_files)} stats files")
+
+        for stats_file in all_stats_files:
             # Parse filename for configuration info
             file_config = self.parse_filename(stats_file.name)
             if not file_config:
                 print(f"Warning: Could not parse filename {stats_file.name}")
                 continue
 
+            # Extract model information from path
+            model_name = self.extract_model_from_path(stats_file)
+
             # Load stats data
             try:
                 with open(stats_file, "r") as f:
                     stats_data = json.load(f)
 
-                # Combine filename info with stats data
-                combined_data = {**file_config, **stats_data}
+                # Combine filename info with stats data and model info
+                combined_data = {**file_config, **stats_data, "model": model_name}
 
                 # Handle missing code_coverage_percent field
                 if "code_coverage_percent" not in combined_data:
@@ -130,6 +175,7 @@ class DataLoader:
                 print(f"Error loading {stats_file}: {e}")
 
         print(f"Successfully loaded {len(self.data)} records")
+        print(f"Models found: {sorted(set(d['model'] for d in self.data))}")
         return self.data
 
     def get_data(self) -> List[Dict[str, Any]]:
