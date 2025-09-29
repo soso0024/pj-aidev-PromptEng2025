@@ -511,8 +511,33 @@ class DatasetAwarePlots:
                 pad=20,
             )
             ax.grid(True, alpha=0.3)
-            ax.set_xlim(left=0)  # Cost cannot be negative
-            ax.set_ylim(0, 100)  # Coverage is 0-100%
+
+            # Set axis limits based on actual data range with some padding
+            if not avg_stats.empty:
+                cost_min = avg_stats["total_cost_usd"].min()
+                cost_max = avg_stats["total_cost_usd"].max()
+                coverage_min = avg_stats["code_coverage_percent"].min()
+                coverage_max = avg_stats["code_coverage_percent"].max()
+
+                # Add padding (10% of range) for better visualization
+                cost_range = cost_max - cost_min
+                coverage_range = coverage_max - coverage_min
+
+                cost_padding = max(
+                    cost_range * 0.1, 0.001
+                )  # Minimum padding for small ranges
+                coverage_padding = max(
+                    coverage_range * 0.1, 2
+                )  # Minimum 2% padding for coverage
+
+                ax.set_xlim(max(0, cost_min - cost_padding), cost_max + cost_padding)
+                ax.set_ylim(
+                    max(0, coverage_min - coverage_padding),
+                    min(100, coverage_max + coverage_padding),
+                )
+            else:
+                ax.set_xlim(left=0)
+                ax.set_ylim(0, 100)
 
             # Add legend
             ax.legend(loc="lower right", fontsize=10)
@@ -599,8 +624,35 @@ class DatasetAwarePlots:
                     f'{model.replace("-", " ").title()} Model', fontweight="bold"
                 )
                 ax.grid(True, alpha=0.3)
-                ax.set_xlim(left=0)  # Cost cannot be negative
-                ax.set_ylim(0, 100)  # Coverage is 0-100%
+
+                # Set axis limits based on actual data range with some padding
+                if not avg_stats.empty:
+                    cost_min = avg_stats["total_cost_usd"].min()
+                    cost_max = avg_stats["total_cost_usd"].max()
+                    coverage_min = avg_stats["code_coverage_percent"].min()
+                    coverage_max = avg_stats["code_coverage_percent"].max()
+
+                    # Add padding (10% of range) for better visualization
+                    cost_range = cost_max - cost_min
+                    coverage_range = coverage_max - coverage_min
+
+                    cost_padding = max(
+                        cost_range * 0.1, 0.001
+                    )  # Minimum padding for small ranges
+                    coverage_padding = max(
+                        coverage_range * 0.1, 2
+                    )  # Minimum 2% padding for coverage
+
+                    ax.set_xlim(
+                        max(0, cost_min - cost_padding), cost_max + cost_padding
+                    )
+                    ax.set_ylim(
+                        max(0, coverage_min - coverage_padding),
+                        min(100, coverage_max + coverage_padding),
+                    )
+                else:
+                    ax.set_xlim(left=0)
+                    ax.set_ylim(0, 100)
 
                 # Add legend
                 ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
