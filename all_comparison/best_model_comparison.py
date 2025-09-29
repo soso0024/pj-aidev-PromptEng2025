@@ -35,6 +35,21 @@ class BestModelComparison:
 
         self.data = []
 
+    def _format_model_name(self, model_name: str) -> str:
+        """Format model name for display."""
+        # Special cases for specific models
+        if model_name == "claude-3-5-haiku":
+            return "Claude 3.5 Haiku"
+        elif model_name == "claude-opus-4-1":
+            return "Claude 4.1 Opus"
+        elif model_name == "claude-4-sonnet":
+            return "Claude 4 Sonnet"
+        elif model_name == "claude-3-haiku":
+            return "Claude 3 Haiku"
+        else:
+            # Fallback: replace hyphens with spaces and title case
+            return model_name.replace("-", " ").title()
+
     def load_all_model_data(self) -> None:
         """Load data from all model directories."""
         print("=" * 80)
@@ -164,7 +179,7 @@ class BestModelComparison:
             return
 
         # Create the plot
-        fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+        fig, ax = plt.subplots(1, 1, figsize=(14, 10))
 
         # Color map for different models
         model_colors = {
@@ -197,16 +212,16 @@ class BestModelComparison:
                 alpha=0.8,
                 edgecolors="black",
                 linewidths=2,
-                label=f"{model.replace('-', ' ').title()}",
+                label=self._format_model_name(model),
             )
 
             # Add model name and config annotation
             ax.annotate(
-                f"{model.replace('-', ' ').title()}\n({config})",
+                f"{self._format_model_name(model)}\n({config})",
                 (cost, coverage),
                 xytext=(10, 10),
                 textcoords="offset points",
-                fontsize=11,
+                fontsize=14,
                 fontweight="bold",
                 bbox=dict(boxstyle="round,pad=0.3", facecolor=color, alpha=0.3),
                 ha="left",
@@ -218,19 +233,23 @@ class BestModelComparison:
                 (cost, coverage),
                 xytext=(10, -30),
                 textcoords="offset points",
-                fontsize=9,
+                fontsize=12,
+                fontweight="bold",
                 alpha=0.7,
                 ha="left",
             )
 
         # Formatting
-        ax.set_xlabel("Average Total Cost (USD)", fontsize=12, fontweight="bold")
-        ax.set_ylabel("Average Code Coverage (%)", fontsize=12, fontweight="bold")
+        ax.set_xlabel("Average Total Cost (USD)", fontsize=16, fontweight="bold")
+        ax.set_ylabel("Average Code Coverage (%)", fontsize=16, fontweight="bold")
+
+        # Set tick label font size
+        ax.tick_params(axis="both", which="major", labelsize=12)
 
         ax.set_title(
             "Best Configuration Comparison Across Models\n"
             "Selection Criterion: Highest Cost-Performance Efficiency (Coverage per $0.001)",
-            fontsize=14,
+            fontsize=20,
             fontweight="bold",
             pad=20,
         )
@@ -259,9 +278,9 @@ class BestModelComparison:
         # Add legend inside the plot area
         ax.legend(
             loc="center right",
-            fontsize=10,
+            fontsize=12,
             title="Models",
-            title_fontsize=12,
+            title_fontsize=14,
             framealpha=0.9,
             fancybox=True,
             shadow=True,
@@ -274,17 +293,25 @@ class BestModelComparison:
             0.02,
             stats_text,
             transform=ax.transAxes,
-            fontsize=9,
+            fontsize=12,
+            fontweight="bold",
             verticalalignment="bottom",
             horizontalalignment="right",
             bbox=dict(boxstyle="round,pad=0.5", facecolor="lightgray", alpha=0.8),
         )
 
-        plt.tight_layout()
+        # Adjust layout with extra space for annotations
+        plt.subplots_adjust(left=0.08, right=0.85, top=0.88, bottom=0.12)
 
         # Save the plot
         filename = "best_model_comparison.png"
-        plt.savefig(output_path / filename, dpi=300, bbox_inches="tight")
+        plt.savefig(
+            output_path / filename,
+            dpi=300,
+            bbox_inches="tight",
+            facecolor="white",
+            edgecolor="none",
+        )
         plt.close()
 
         print(f"\n✅ Comparison plot saved: {output_path / filename}")
@@ -305,9 +332,9 @@ class BestModelComparison:
         best_efficiency_row = best_configs.iloc[best_efficiency_idx]
 
         stats_text = "SUMMARY:\n"
-        stats_text += f"Best Coverage: {best_coverage_row['model']} ({best_coverage_row['code_coverage_percent']:.1f}%)\n"
-        stats_text += f"Lowest Cost: {lowest_cost_row['model']} (${lowest_cost_row['total_cost_usd']:.4f})\n"
-        stats_text += f"Best Efficiency: {best_efficiency_row['model']} ({best_efficiency_row['efficiency_score']:.1f})"
+        stats_text += f"Best Coverage: {self._format_model_name(best_coverage_row['model'])} ({best_coverage_row['code_coverage_percent']:.1f}%)\n"
+        stats_text += f"Lowest Cost: {self._format_model_name(lowest_cost_row['model'])} (${lowest_cost_row['total_cost_usd']:.4f})\n"
+        stats_text += f"Best Efficiency: {self._format_model_name(best_efficiency_row['model'])} ({best_efficiency_row['efficiency_score']:.1f})"
 
         return stats_text
 

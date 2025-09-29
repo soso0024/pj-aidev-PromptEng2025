@@ -67,10 +67,11 @@ class TraditionalPlots:
 
         bars = ax.bar(success_rate["config_type_display"], success_rate["success_rate"])
         ax.set_title(
-            "Success Rate by Configuration Type", fontsize=14, fontweight="bold"
+            "Success Rate by Configuration Type", fontsize=20, fontweight="bold"
         )
-        ax.set_xlabel("Configuration Type")
-        ax.set_ylabel("Success Rate (%)")
+        ax.set_xlabel("Configuration Type", fontsize=16, fontweight="bold")
+        ax.set_ylabel("Success Rate (%)", fontsize=16, fontweight="bold")
+        ax.tick_params(axis="both", which="major", labelsize=12)
         ax.set_ylim(0, 100)
 
         # Add value labels on bars
@@ -80,9 +81,11 @@ class TraditionalPlots:
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + 1,
-                f"{rate:.1f}%\n(n={count})",
+                f"{rate:.1f}%",
                 ha="center",
                 va="bottom",
+                fontsize=14,
+                fontweight="bold",
             )
 
         plt.xticks(rotation=45)
@@ -109,10 +112,13 @@ class TraditionalPlots:
             yerr=coverage_stats["std"],
             capsize=5,
         )
-        ax.set_title("Average Code Coverage by Configuration", fontweight="bold")
-        ax.set_xlabel("Configuration Type")
-        ax.set_ylabel("Average Code Coverage (%)")
-        ax.tick_params(axis="x", rotation=45)
+        ax.set_title(
+            "Average Code Coverage by Configuration", fontsize=20, fontweight="bold"
+        )
+        ax.set_xlabel("Configuration Type", fontsize=16, fontweight="bold")
+        ax.set_ylabel("Average Code Coverage (%)", fontsize=16, fontweight="bold")
+        ax.tick_params(axis="x", rotation=45, labelsize=12)
+        ax.tick_params(axis="y", labelsize=12)
         # Code coverage ranges from 0-100%
         ax.set_ylim(0, 100)
 
@@ -123,9 +129,11 @@ class TraditionalPlots:
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + 1,
-                f"{mean:.1f}%\n(n={count})",
+                f"{mean:.1f}%",
                 ha="center",
                 va="bottom",
+                fontsize=14,
+                fontweight="bold",
             )
 
         plt.tight_layout()
@@ -149,10 +157,13 @@ class TraditionalPlots:
             yerr=cost_stats["std"],
             capsize=5,
         )
-        ax.set_title("Average Total Cost by Configuration", fontweight="bold")
-        ax.set_xlabel("Configuration Type")
-        ax.set_ylabel("Average Total Cost (USD)")
-        ax.tick_params(axis="x", rotation=45)
+        ax.set_title(
+            "Average Total Cost by Configuration", fontsize=20, fontweight="bold"
+        )
+        ax.set_xlabel("Configuration Type", fontsize=16, fontweight="bold")
+        ax.set_ylabel("Average Total Cost (USD)", fontsize=16, fontweight="bold")
+        ax.tick_params(axis="x", rotation=45, labelsize=12)
+        ax.tick_params(axis="y", labelsize=12)
         # Cost cannot be negative - set y-axis to start from 0
         ax.set_ylim(bottom=0)
 
@@ -161,9 +172,11 @@ class TraditionalPlots:
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + 0.001,
-                f"${mean:.4f}\n(n={count})",
+                f"${mean:.4f}",
                 ha="center",
                 va="bottom",
+                fontsize=14,
+                fontweight="bold",
             )
 
         plt.tight_layout()
@@ -187,10 +200,13 @@ class TraditionalPlots:
             yerr=fix_stats["std"],
             capsize=5,
         )
-        ax.set_title("Average Fix Attempts by Configuration", fontweight="bold")
-        ax.set_xlabel("Configuration Type")
-        ax.set_ylabel("Average Fix Attempts")
-        ax.tick_params(axis="x", rotation=45)
+        ax.set_title(
+            "Average Fix Attempts by Configuration", fontsize=20, fontweight="bold"
+        )
+        ax.set_xlabel("Configuration Type", fontsize=16, fontweight="bold")
+        ax.set_ylabel("Average Fix Attempts", fontsize=16, fontweight="bold")
+        ax.tick_params(axis="x", rotation=45, labelsize=12)
+        ax.tick_params(axis="y", labelsize=12)
         # Fix attempts cannot be negative - set y-axis to start from 0
         ax.set_ylim(bottom=0)
 
@@ -199,9 +215,11 @@ class TraditionalPlots:
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + 0.05,
-                f"{mean:.2f}\n(n={count})",
+                f"{mean:.2f}",
                 ha="center",
                 va="bottom",
+                fontsize=14,
+                fontweight="bold",
             )
 
         plt.tight_layout()
@@ -225,10 +243,13 @@ class TraditionalPlots:
             yerr=token_stats["std"],
             capsize=5,
         )
-        ax.set_title("Average Input Tokens by Configuration", fontweight="bold")
-        ax.set_xlabel("Configuration Type")
-        ax.set_ylabel("Average Input Tokens")
-        ax.tick_params(axis="x", rotation=45)
+        ax.set_title(
+            "Average Input Tokens by Configuration", fontsize=20, fontweight="bold"
+        )
+        ax.set_xlabel("Configuration Type", fontsize=16, fontweight="bold")
+        ax.set_ylabel("Average Input Tokens", fontsize=16, fontweight="bold")
+        ax.tick_params(axis="x", rotation=45, labelsize=12)
+        ax.tick_params(axis="y", labelsize=12)
         # Set y-axis to start at 0 for consistency
         ax.set_ylim(bottom=0)
 
@@ -237,9 +258,11 @@ class TraditionalPlots:
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + 50,
-                f"{mean:.0f}\n(n={count})",
+                f"{mean:.0f}",
                 ha="center",
                 va="bottom",
+                fontsize=14,
+                fontweight="bold",
             )
 
         plt.tight_layout()

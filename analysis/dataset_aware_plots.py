@@ -104,6 +104,7 @@ class DatasetAwarePlots:
                     cmap="RdYlGn",
                     ax=ax,
                     cbar_kws={"label": "Success Rate"},
+                    annot_kws={"fontsize": 14, "fontweight": "bold"},
                 )
             else:
                 ax.text(
@@ -123,9 +124,12 @@ class DatasetAwarePlots:
                 va="center",
                 transform=ax.transAxes,
             )
-        ax.set_title("Success Rate Heatmap by Complexity", fontweight="bold")
-        ax.set_xlabel("Configuration Type")
-        ax.set_ylabel("Problem Complexity Level")
+        ax.set_title(
+            "Success Rate Heatmap by Complexity", fontsize=20, fontweight="bold"
+        )
+        ax.set_xlabel("Configuration Type", fontsize=16, fontweight="bold")
+        ax.set_ylabel("Problem Complexity Level", fontsize=16, fontweight="bold")
+        ax.tick_params(axis="both", which="major", labelsize=12)
 
         plt.tight_layout()
         plt.savefig(
@@ -175,12 +179,21 @@ class DatasetAwarePlots:
 
             pivot_algo_ordered.plot(kind="bar", ax=ax, width=0.8)
             ax.set_title(
-                "Success Rate by Algorithm Type and Configuration", fontweight="bold"
+                "Success Rate by Algorithm Type and Configuration",
+                fontsize=20,
+                fontweight="bold",
             )
-            ax.set_xlabel("Algorithm Type")
-            ax.set_ylabel("Success Rate (%)")
-            ax.legend(title="Configuration", bbox_to_anchor=(1.05, 1), loc="upper left")
-            ax.tick_params(axis="x", rotation=45)
+            ax.set_xlabel("Algorithm Type", fontsize=16, fontweight="bold")
+            ax.set_ylabel("Success Rate (%)", fontsize=16, fontweight="bold")
+            ax.legend(
+                title="Configuration",
+                bbox_to_anchor=(1.05, 1),
+                loc="upper left",
+                fontsize=12,
+                title_fontsize=14,
+            )
+            ax.tick_params(axis="x", rotation=45, labelsize=12)
+            ax.tick_params(axis="y", labelsize=12)
 
         plt.tight_layout()
         plt.savefig(
@@ -243,13 +256,22 @@ class DatasetAwarePlots:
             ).fillna(0)
 
             pivot_data.plot(kind="bar", ax=axes[idx], width=0.8)
-            axes[idx].set_title(f"{ylabel} by Complexity Level", fontweight="bold")
-            axes[idx].set_xlabel("Problem Complexity Level")
-            axes[idx].set_ylabel(ylabel)
+            axes[idx].set_title(
+                f"{ylabel} by Complexity Level", fontsize=20, fontweight="bold"
+            )
+            axes[idx].set_xlabel(
+                "Problem Complexity Level", fontsize=16, fontweight="bold"
+            )
+            axes[idx].set_ylabel(ylabel, fontsize=16, fontweight="bold")
             axes[idx].legend(
-                title="Configuration", bbox_to_anchor=(1.05, 1), loc="upper left"
+                title="Configuration",
+                bbox_to_anchor=(1.05, 1),
+                loc="upper left",
+                fontsize=12,
+                title_fontsize=14,
             )
             axes[idx].set_xticklabels(axes[idx].get_xticklabels(), rotation=0)
+            axes[idx].tick_params(axis="both", which="major", labelsize=12)
 
         plt.tight_layout()
         plt.savefig(
@@ -350,8 +372,11 @@ class DatasetAwarePlots:
             labels=major_algos.index,
             autopct="%1.1f%%",
             startangle=90,
+            textprops={"fontsize": 14, "fontweight": "bold"},
         )
-        ax.set_title("Distribution of Algorithm Types in Dataset", fontweight="bold")
+        ax.set_title(
+            "Distribution of Algorithm Types in Dataset", fontsize=20, fontweight="bold"
+        )
 
         plt.tight_layout()
         plt.savefig(
@@ -400,10 +425,12 @@ class DatasetAwarePlots:
             )
             ax.set_title(
                 "Success Rate by Algorithm Type\n(Types with ≥3 samples)",
+                fontsize=20,
                 fontweight="bold",
             )
-            ax.set_xlabel("Success Rate (%)")
-            ax.set_ylabel("Algorithm Type")
+            ax.set_xlabel("Success Rate (%)", fontsize=16, fontweight="bold")
+            ax.set_ylabel("Algorithm Type", fontsize=16, fontweight="bold")
+            ax.tick_params(axis="both", which="major", labelsize=12)
 
             # Add value labels
             for bar, rate, count in zip(
@@ -415,6 +442,8 @@ class DatasetAwarePlots:
                     f"{rate:.1f}% (n={count})",
                     ha="left",
                     va="center",
+                    fontsize=14,
+                    fontweight="bold",
                 )
 
         plt.tight_layout()
@@ -496,20 +525,21 @@ class DatasetAwarePlots:
                     (cost, coverage),
                     xytext=(8, 8),
                     textcoords="offset points",
-                    fontsize=11,
+                    fontsize=14,
                     fontweight="bold",
                     alpha=0.9,
                 )
 
             # Formatting
-            ax.set_xlabel("Average Total Cost (USD)", fontsize=12)
-            ax.set_ylabel("Average Code Coverage (%)", fontsize=12)
+            ax.set_xlabel("Average Total Cost (USD)", fontsize=16, fontweight="bold")
+            ax.set_ylabel("Average Code Coverage (%)", fontsize=16, fontweight="bold")
             ax.set_title(
                 f'{model.replace("-", " ").title()} Model - Cost vs Coverage Analysis',
-                fontsize=14,
+                fontsize=20,
                 fontweight="bold",
                 pad=20,
             )
+            ax.tick_params(axis="both", which="major", labelsize=12)
             ax.grid(True, alpha=0.3)
 
             # Set axis limits based on actual data range with some padding
@@ -540,7 +570,7 @@ class DatasetAwarePlots:
                 ax.set_ylim(0, 100)
 
             # Add legend
-            ax.legend(loc="lower right", fontsize=10)
+            ax.legend(loc="lower right", fontsize=12)
 
             plt.tight_layout()
 
@@ -613,16 +643,24 @@ class DatasetAwarePlots:
                         (cost, coverage),
                         xytext=(5, 5),
                         textcoords="offset points",
-                        fontsize=9,
+                        fontsize=14,
+                        fontweight="bold",
                         alpha=0.8,
                     )
 
                 # Formatting
-                ax.set_xlabel("Average Total Cost (USD)")
-                ax.set_ylabel("Average Code Coverage (%)")
-                ax.set_title(
-                    f'{model.replace("-", " ").title()} Model', fontweight="bold"
+                ax.set_xlabel(
+                    "Average Total Cost (USD)", fontsize=16, fontweight="bold"
                 )
+                ax.set_ylabel(
+                    "Average Code Coverage (%)", fontsize=16, fontweight="bold"
+                )
+                ax.set_title(
+                    f'{model.replace("-", " ").title()} Model',
+                    fontsize=20,
+                    fontweight="bold",
+                )
+                ax.tick_params(axis="both", which="major", labelsize=12)
                 ax.grid(True, alpha=0.3)
 
                 # Set axis limits based on actual data range with some padding
@@ -655,7 +693,7 @@ class DatasetAwarePlots:
                     ax.set_ylim(0, 100)
 
                 # Add legend
-                ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+                ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=12)
 
             # Hide empty subplots if any
             for idx in range(n_models, len(axes)):
@@ -664,7 +702,7 @@ class DatasetAwarePlots:
             # Overall title
             fig.suptitle(
                 "Cost vs Coverage Analysis by Model and Configuration",
-                fontsize=16,
+                fontsize=20,
                 fontweight="bold",
                 y=0.98,
             )
