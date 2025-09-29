@@ -107,15 +107,19 @@ class DatasetAwarePlots:
             )
 
             if not pivot_heatmap.empty:
-                sns.heatmap(
+                heatmap = sns.heatmap(
                     pivot_heatmap,
                     annot=True,
                     fmt=".2f",
                     cmap="RdYlGn",
                     ax=ax,
                     cbar_kws={"label": "Success Rate"},
-                    annot_kws={"fontsize": 14, "fontweight": "bold"},
+                    annot_kws={"fontsize": 16, "fontweight": "bold"},
                 )
+                # Increase colorbar label and tick label sizes
+                cbar = heatmap.collections[0].colorbar
+                cbar.ax.tick_params(labelsize=14)
+                cbar.set_label("Success Rate", size=16)
             else:
                 ax.text(
                     0.5,
@@ -134,12 +138,9 @@ class DatasetAwarePlots:
                 va="center",
                 transform=ax.transAxes,
             )
-        ax.set_title(
-            "Success Rate Heatmap by Complexity", fontsize=20, fontweight="bold"
-        )
-        ax.set_xlabel("Configuration Type", fontsize=16, fontweight="bold")
-        ax.set_ylabel("Problem Complexity Level", fontsize=16, fontweight="bold")
-        ax.tick_params(axis="both", which="major", labelsize=12)
+        ax.set_xlabel("Configuration Type", fontsize=20, fontweight="bold")
+        ax.set_ylabel("Problem Complexity Level", fontsize=20, fontweight="bold")
+        ax.tick_params(axis="both", which="major", labelsize=16)
 
         plt.tight_layout()
         plt.savefig(
