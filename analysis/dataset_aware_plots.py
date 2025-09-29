@@ -39,6 +39,16 @@ class DatasetAwarePlots:
 
         return df
 
+    def _format_model_name(self, model_name: str) -> str:
+        """Format model name for display."""
+        model_display_names = {
+            "claude-3-5-haiku": "Claude 3.5 Haiku",
+            "claude-opus-4-1": "Claude Opus 4.1",
+            "claude-4-sonnet": "Claude 4 Sonnet",
+            "claude-3-haiku": "Claude 3 Haiku",
+        }
+        return model_display_names.get(model_name, model_name.replace("-", " ").title())
+
     def create_all_plots(self, output_path: Path) -> None:
         """Create all dataset-aware visualization plots."""
         print("Creating dataset-aware visualizations...")
@@ -494,10 +504,16 @@ class DatasetAwarePlots:
                     {
                         "total_cost_usd": "mean",
                         "code_coverage_percent": "mean",
+                        "success": "mean",  # success rate
                         "config_type": "count",  # for sample size
                     }
                 )
                 .reset_index()
+            )
+
+            # Calculate efficiency score (coverage per $0.001)
+            avg_stats["efficiency_score"] = avg_stats["code_coverage_percent"] / (
+                avg_stats["total_cost_usd"] * 1000
             )
 
             # Plot scatter points for each configuration
@@ -506,6 +522,8 @@ class DatasetAwarePlots:
                 cost = row["total_cost_usd"]
                 coverage = row["code_coverage_percent"]
                 count = row["config_type"]
+                success_rate = row["success"] * 100
+                efficiency = row["efficiency_score"]
 
                 color = config_colors.get(config, "#888888")
                 ax.scatter(
@@ -530,11 +548,22 @@ class DatasetAwarePlots:
                     alpha=0.9,
                 )
 
+                # Add efficiency and success rate annotations
+                ax.annotate(
+                    f"Efficiency: {efficiency:.1f}\nSuccess: {success_rate:.1f}%",
+                    (cost, coverage),
+                    xytext=(8, -25),
+                    textcoords="offset points",
+                    fontsize=12,
+                    fontweight="bold",
+                    alpha=0.7,
+                )
+
             # Formatting
             ax.set_xlabel("Average Total Cost (USD)", fontsize=16, fontweight="bold")
             ax.set_ylabel("Average Code Coverage (%)", fontsize=16, fontweight="bold")
             ax.set_title(
-                f'{model.replace("-", " ").title()} Model - Cost vs Coverage Analysis',
+                f"{self._format_model_name(model)} Model - Cost vs Coverage Analysis",
                 fontsize=20,
                 fontweight="bold",
                 pad=20,
@@ -612,10 +641,16 @@ class DatasetAwarePlots:
                         {
                             "total_cost_usd": "mean",
                             "code_coverage_percent": "mean",
+                            "success": "mean",  # success rate
                             "config_type": "count",  # for sample size
                         }
                     )
                     .reset_index()
+                )
+
+                # Calculate efficiency score (coverage per $0.001)
+                avg_stats["efficiency_score"] = avg_stats["code_coverage_percent"] / (
+                    avg_stats["total_cost_usd"] * 1000
                 )
 
                 # Plot scatter points for each configuration
@@ -624,6 +659,8 @@ class DatasetAwarePlots:
                     cost = row["total_cost_usd"]
                     coverage = row["code_coverage_percent"]
                     count = row["config_type"]
+                    success_rate = row["success"] * 100
+                    efficiency = row["efficiency_score"]
 
                     color = config_colors.get(config, "#888888")
                     ax.scatter(
@@ -648,6 +685,17 @@ class DatasetAwarePlots:
                         alpha=0.8,
                     )
 
+                    # Add efficiency and success rate annotations
+                    ax.annotate(
+                        f"Efficiency: {efficiency:.1f}\nSuccess: {success_rate:.1f}%",
+                        (cost, coverage),
+                        xytext=(5, -20),
+                        textcoords="offset points",
+                        fontsize=10,
+                        fontweight="bold",
+                        alpha=0.7,
+                    )
+
                 # Formatting
                 ax.set_xlabel(
                     "Average Total Cost (USD)", fontsize=16, fontweight="bold"
@@ -656,7 +704,7 @@ class DatasetAwarePlots:
                     "Average Code Coverage (%)", fontsize=16, fontweight="bold"
                 )
                 ax.set_title(
-                    f'{model.replace("-", " ").title()} Model',
+                    f"{self._format_model_name(model)} Model",
                     fontsize=20,
                     fontweight="bold",
                 )
