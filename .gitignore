@@ -48,3 +48,4 @@ generated_tests_claude-opus-4-1/
 all_comparison/best_model_comparison.png
 all_comparison/comprehensive_summary_table.csv
 all_comparison/comprehensive_summary_table.txt
+all_comparison/input_tokens_comparison.png
