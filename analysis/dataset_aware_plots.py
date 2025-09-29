@@ -532,7 +532,7 @@ class DatasetAwarePlots:
                     color=color,
                     s=150,
                     alpha=0.8,
-                    label=f"{config} (n={count})",
+                    label=config,
                     edgecolors="black",
                     linewidths=1,
                 )
@@ -543,7 +543,7 @@ class DatasetAwarePlots:
                     (cost, coverage),
                     xytext=(8, 8),
                     textcoords="offset points",
-                    fontsize=14,
+                    fontsize=18,
                     fontweight="bold",
                     alpha=0.9,
                 )
@@ -554,21 +554,16 @@ class DatasetAwarePlots:
                     (cost, coverage),
                     xytext=(8, -25),
                     textcoords="offset points",
-                    fontsize=12,
+                    fontsize=16,
                     fontweight="bold",
                     alpha=0.7,
                 )
 
             # Formatting
-            ax.set_xlabel("Average Total Cost (USD)", fontsize=16, fontweight="bold")
-            ax.set_ylabel("Average Code Coverage (%)", fontsize=16, fontweight="bold")
-            ax.set_title(
-                f"{self._format_model_name(model)} Model - Cost vs Coverage Analysis",
-                fontsize=20,
-                fontweight="bold",
-                pad=20,
-            )
-            ax.tick_params(axis="both", which="major", labelsize=12)
+            ax.set_xlabel("Average Total Cost (USD)", fontsize=20, fontweight="bold")
+            ax.set_ylabel("Average Code Coverage (%)", fontsize=20, fontweight="bold")
+            # Title removed for paper publication
+            ax.tick_params(axis="both", which="major", labelsize=16)
             ax.grid(True, alpha=0.3)
 
             # Set axis limits based on actual data range with some padding
@@ -599,7 +594,7 @@ class DatasetAwarePlots:
                 ax.set_ylim(0, 100)
 
             # Add legend
-            ax.legend(loc="lower right", fontsize=12)
+            ax.legend(loc="upper right", fontsize=16)
 
             plt.tight_layout()
 
@@ -669,7 +664,7 @@ class DatasetAwarePlots:
                         color=color,
                         s=100,
                         alpha=0.8,
-                        label=f"{config} (n={count})",
+                        label=config,
                         edgecolors="black",
                         linewidths=0.5,
                     )
@@ -680,7 +675,7 @@ class DatasetAwarePlots:
                         (cost, coverage),
                         xytext=(5, 5),
                         textcoords="offset points",
-                        fontsize=14,
+                        fontsize=18,
                         fontweight="bold",
                         alpha=0.8,
                     )
@@ -691,24 +686,20 @@ class DatasetAwarePlots:
                         (cost, coverage),
                         xytext=(5, -20),
                         textcoords="offset points",
-                        fontsize=10,
+                        fontsize=16,
                         fontweight="bold",
                         alpha=0.7,
                     )
 
                 # Formatting
                 ax.set_xlabel(
-                    "Average Total Cost (USD)", fontsize=16, fontweight="bold"
+                    "Average Total Cost (USD)", fontsize=20, fontweight="bold"
                 )
                 ax.set_ylabel(
-                    "Average Code Coverage (%)", fontsize=16, fontweight="bold"
+                    "Average Code Coverage (%)", fontsize=20, fontweight="bold"
                 )
-                ax.set_title(
-                    f"{self._format_model_name(model)} Model",
-                    fontsize=20,
-                    fontweight="bold",
-                )
-                ax.tick_params(axis="both", which="major", labelsize=12)
+                # Individual subplot titles removed for paper publication
+                ax.tick_params(axis="both", which="major", labelsize=16)
                 ax.grid(True, alpha=0.3)
 
                 # Set axis limits based on actual data range with some padding
@@ -741,19 +732,13 @@ class DatasetAwarePlots:
                     ax.set_ylim(0, 100)
 
                 # Add legend
-                ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=12)
+                ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=16)
 
             # Hide empty subplots if any
             for idx in range(n_models, len(axes)):
                 axes[idx].set_visible(False)
 
-            # Overall title
-            fig.suptitle(
-                "Cost vs Coverage Analysis by Model and Configuration",
-                fontsize=20,
-                fontweight="bold",
-                y=0.98,
-            )
+            # Overall title removed for paper publication
 
             plt.tight_layout()
 
