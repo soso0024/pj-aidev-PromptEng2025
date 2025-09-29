@@ -412,7 +412,7 @@ class TestResultsAnalyzer:
         self._plot_config_performance_by_complexity(output_path)
 
         # 11. Cost vs Complexity Analysis
-        self._plot_cost_vs_complexity(output_path)
+        # self._plot_cost_vs_complexity(output_path)
 
         # 12. Algorithm Type Distribution
         self._plot_algorithm_type_distribution(output_path)
@@ -822,22 +822,7 @@ class TestResultsAnalyzer:
             )
             return
 
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 12))
-
-        # Count problems by algorithm type with consistent ordering
-        algo_counts = self.df["algorithm_type"].value_counts()
-
-        # Reorder according to our defined order, keeping only types that exist in data
-        existing_types = [
-            t for t in self.algorithm_type_order if t in algo_counts.index
-        ]
-        algo_counts_ordered = algo_counts.reindex(existing_types)
-
-        algo_counts_ordered.plot(kind="bar", ax=ax1)
-        ax1.set_title("Distribution of Problems by Algorithm Type", fontweight="bold")
-        ax1.set_xlabel("Algorithm Type")
-        ax1.set_ylabel("Number of Problems")
-        ax1.tick_params(axis="x", rotation=45)
+        fig, ax = plt.subplots(figsize=(16, 8))
 
         # Success rate by algorithm type
         success_by_algo = (
@@ -869,16 +854,14 @@ class TestResultsAnalyzer:
             ]
             pivot_algo_ordered = pivot_algo.reindex(ordered_algos)
 
-            pivot_algo_ordered.plot(kind="bar", ax=ax2, width=0.8)
-            ax2.set_title(
+            pivot_algo_ordered.plot(kind="bar", ax=ax, width=0.8)
+            ax.set_title(
                 "Success Rate by Algorithm Type and Configuration", fontweight="bold"
             )
-            ax2.set_xlabel("Algorithm Type")
-            ax2.set_ylabel("Success Rate (%)")
-            ax2.legend(
-                title="Configuration", bbox_to_anchor=(1.05, 1), loc="upper left"
-            )
-            ax2.tick_params(axis="x", rotation=45)
+            ax.set_xlabel("Algorithm Type")
+            ax.set_ylabel("Success Rate (%)")
+            ax.legend(title="Configuration", bbox_to_anchor=(1.05, 1), loc="upper left")
+            ax.tick_params(axis="x", rotation=45)
 
         plt.tight_layout()
         plt.savefig(

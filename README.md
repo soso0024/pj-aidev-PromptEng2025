@@ -116,14 +116,23 @@ Generate comprehensive analysis of test results:
 python run_analysis.py
 ```
 
-This creates visualizations in model-specific folders (e.g., `claude-4-sonnet_viz/`) showing:
+This creates 10 visualizations in model-specific folders (e.g., `claude-4-sonnet_viz/`) showing:
+
+**Traditional Analysis (5 plots):**
 
 - Success rates by configuration
 - Code coverage analysis
-- Cost analysis
-- Problem difficulty heatmaps
-- Algorithm type performance
-- And more...
+- Cost analysis by configuration
+- Fix attempts distribution
+- Input token usage
+
+**Dataset-Aware Analysis (5 plots):**
+
+- Success rates by problem complexity level
+- Success rates by algorithm type and configuration
+- Configuration performance across complexity levels
+- Algorithm type distribution in dataset
+- Algorithm type success rates (detailed)
 
 ## Output Structure
 
