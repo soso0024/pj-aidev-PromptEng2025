@@ -549,14 +549,20 @@ class DatasetAwarePlots:
                 )
 
                 # Add efficiency and success rate annotations
+                # Position text on the left for 'ast' configuration, right for others
+                x_offset = -8 if config == "ast" else 8
+                h_align = "right" if config == "ast" else "left"
+                # Adjust y_offset for better spacing, especially for docstring_ast
+                y_offset = -30
                 ax.annotate(
                     f"Efficiency: {efficiency:.1f}\nSuccess: {success_rate:.1f}%",
                     (cost, coverage),
-                    xytext=(8, -25),
+                    xytext=(x_offset, y_offset),
                     textcoords="offset points",
                     fontsize=16,
                     fontweight="bold",
                     alpha=0.7,
+                    ha=h_align,
                 )
 
             # Formatting
