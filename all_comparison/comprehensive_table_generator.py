@@ -2,7 +2,7 @@
 """
 Comprehensive Model-Configuration Table Generator
 
-Creates a detailed summary table showing metrics for all combinations of 
+Creates a detailed summary table showing metrics for all combinations of
 models and configurations as requested in the requirements.
 
 Usage:
@@ -34,21 +34,16 @@ class ComprehensiveTableGenerator:
             self.base_dir = Path(base_dir)
 
         self.data = []
-        
+
         # Define the models and configurations we expect
         self.expected_models = [
             "claude-3-5-haiku",
-            "claude-3-haiku", 
+            "claude-3-haiku",
             "claude-4-sonnet",
-            "claude-opus-4-1"
+            "claude-opus-4-1",
         ]
-        
-        self.expected_configs = [
-            "basic",
-            "ast", 
-            "docstring",
-            "docstring_ast"
-        ]
+
+        self.expected_configs = ["basic", "ast", "docstring", "docstring_ast"]
 
     def _format_model_name(self, model_name: str) -> str:
         """Format model name for display."""
@@ -56,7 +51,7 @@ class ComprehensiveTableGenerator:
             "claude-3-5-haiku": "Claude 3.5 Haiku",
             "claude-opus-4-1": "Claude 4.1 Opus",
             "claude-4-sonnet": "Claude 4 Sonnet",
-            "claude-3-haiku": "Claude 3 Haiku"
+            "claude-3-haiku": "Claude 3 Haiku",
         }
         return model_display_names.get(model_name, model_name.replace("-", " ").title())
 
@@ -65,8 +60,8 @@ class ComprehensiveTableGenerator:
         config_display_names = {
             "basic": "Basic",
             "ast": "AST",
-            "docstring": "Docstring", 
-            "docstring_ast": "Docstring + AST"
+            "docstring": "Docstring",
+            "docstring_ast": "Docstring + AST",
         }
         return config_display_names.get(config_name, config_name.title())
 
@@ -122,9 +117,9 @@ class ComprehensiveTableGenerator:
     def calculate_comprehensive_metrics(self) -> pd.DataFrame:
         """
         Calculate comprehensive metrics for all model-configuration combinations.
-        
+
         Returns DataFrame with columns:
-        - Model, Configuration, Average Cost (USD), Average Code Coverage (%), 
+        - Model, Configuration, Average Cost (USD), Average Code Coverage (%),
           Success Rate (%), Average Fix Attempts, Sample Size
         """
         if not self.data:
@@ -132,67 +127,80 @@ class ComprehensiveTableGenerator:
             return pd.DataFrame()
 
         df = pd.DataFrame(self.data)
-        
+
         # Filter out 'unknown' models and focus on expected configurations
         df = df[df["model"] != "unknown"]
         df = df[df["config_type"].isin(self.expected_configs)]
 
         print(f"\nProcessing {len(df)} records for comprehensive analysis...")
-        
+
         # Calculate metrics for each model-configuration combination
         results = []
-        
+
         for model in self.expected_models:
             model_data = df[df["model"] == model]
-            
+
             if model_data.empty:
                 print(f"Warning: No data found for model {model}")
                 continue
-                
+
             print(f"\nProcessing {model} ({len(model_data)} records)...")
-            
+
             for config in self.expected_configs:
                 config_data = model_data[model_data["config_type"] == config]
-                
+
                 if config_data.empty:
                     # Add empty row for missing combinations
-                    results.append({
-                        "Model": self._format_model_name(model),
-                        "Configuration": self._format_config_name(config),
-                        "Average Cost (USD)": 0.0,
-                        "Average Code Coverage (%)": 0.0,
-                        "Success Rate (%)": 0.0,
-                        "Average Fix Attempts": 0.0,
-                        "Sample Size": 0
-                    })
+                    results.append(
+                        {
+                            "Model": self._format_model_name(model),
+                            "Configuration": self._format_config_name(config),
+                            "Average Cost (USD)": 0.0,
+                            "Average Code Coverage (%)": 0.0,
+                            "Success Rate (%)": 0.0,
+                            "Average Fix Attempts": 0.0,
+                            "Sample Size": 0,
+                        }
+                    )
                     print(f"  {config}: No data available")
                     continue
-                
+
                 # Calculate metrics
                 avg_cost = config_data["total_cost_usd"].mean()
                 avg_coverage = config_data["code_coverage_percent"].mean()
                 success_rate = config_data["success"].mean() * 100
-                
-                # Handle fix attempts - some records might not have this field
-                if "fix_attempts" in config_data.columns:
-                    avg_fix_attempts = config_data["fix_attempts"].mean()
+
+                # Handle fix attempts - use fix_attempts_used field from stats
+                if "fix_attempts_used" in config_data.columns:
+                    avg_fix_attempts = config_data["fix_attempts_used"].mean()
                 else:
-                    # If fix_attempts is not available, we can try to infer it or set to 1
-                    avg_fix_attempts = 1.0
-                
+                    # If fix_attempts_used is not available, check for legacy field names
+                    if "fix_attempts" in config_data.columns:
+                        avg_fix_attempts = config_data["fix_attempts"].mean()
+                    else:
+                        # Fallback: try to infer from available data or use 0 as default
+                        print(
+                            f"    Warning: No fix attempts data found for {model} - {config}"
+                        )
+                        avg_fix_attempts = 0.0
+
                 sample_size = len(config_data)
-                
-                results.append({
-                    "Model": self._format_model_name(model),
-                    "Configuration": self._format_config_name(config),
-                    "Average Cost (USD)": avg_cost,
-                    "Average Code Coverage (%)": avg_coverage,
-                    "Success Rate (%)": success_rate,
-                    "Average Fix Attempts": avg_fix_attempts,
-                    "Sample Size": sample_size
-                })
-                
-                print(f"  {config}: Cost=${avg_cost:.4f}, Coverage={avg_coverage:.1f}%, Success={success_rate:.1f}%, Samples={sample_size}")
+
+                results.append(
+                    {
+                        "Model": self._format_model_name(model),
+                        "Configuration": self._format_config_name(config),
+                        "Average Cost (USD)": avg_cost,
+                        "Average Code Coverage (%)": avg_coverage,
+                        "Success Rate (%)": success_rate,
+                        "Average Fix Attempts": avg_fix_attempts,
+                        "Sample Size": sample_size,
+                    }
+                )
+
+                print(
+                    f"  {config}: Cost=${avg_cost:.4f}, Coverage={avg_coverage:.1f}%, Success={success_rate:.1f}%, Fix Attempts={avg_fix_attempts:.2f}, Samples={sample_size}"
+                )
 
         return pd.DataFrame(results)
 
@@ -200,31 +208,31 @@ class ComprehensiveTableGenerator:
         """Generate and display the comprehensive summary table."""
         if output_dir is None:
             output_dir = Path("all_comparison")
-        
+
         output_dir.mkdir(exist_ok=True)
-        
+
         # Calculate metrics
         metrics_df = self.calculate_comprehensive_metrics()
-        
+
         if metrics_df.empty:
             print("Warning: No data available for comprehensive table.")
             return
-        
+
         print("\n" + "=" * 120)
         print("COMPREHENSIVE MODEL-CONFIGURATION SUMMARY TABLE (Table 1)")
         print("=" * 120)
-        
+
         # Create a formatted table for display
         self._display_formatted_table(metrics_df)
-        
+
         # Save to CSV
         csv_path = output_dir / "comprehensive_summary_table.csv"
         metrics_df.to_csv(csv_path, index=False, float_format="%.4f")
         print(f"\n✅ Table saved to CSV: {csv_path}")
-        
+
         # Save formatted table to text file
         txt_path = output_dir / "comprehensive_summary_table.txt"
-        with open(txt_path, 'w') as f:
+        with open(txt_path, "w") as f:
             f.write("COMPREHENSIVE MODEL-CONFIGURATION SUMMARY TABLE (Table 1)\n")
             f.write("=" * 120 + "\n\n")
             f.write(self._format_table_for_text(metrics_df))
@@ -235,82 +243,107 @@ class ComprehensiveTableGenerator:
         if df.empty:
             print("No data to display.")
             return
-        
+
         # Print header
-        print(f"{'Model':<20} {'Configuration':<15} {'Avg Cost (USD)':<15} {'Avg Coverage (%)':<17} {'Success Rate (%)':<17} {'Avg Fix Attempts':<17} {'Sample Size':<12}")
+        print(
+            f"{'Model':<20} {'Configuration':<15} {'Avg Cost (USD)':<15} {'Avg Coverage (%)':<17} {'Success Rate (%)':<17} {'Avg Fix Attempts':<17} {'Sample Size':<12}"
+        )
         print("-" * 120)
-        
+
         # Group by model for better readability
         for model in self.expected_models:
             model_display = self._format_model_name(model)
             model_data = df[df["Model"] == model_display]
-            
+
             if model_data.empty:
                 continue
-                
+
             for _, row in model_data.iterrows():
-                print(f"{row['Model']:<20} {row['Configuration']:<15} ${row['Average Cost (USD)']:<14.4f} {row['Average Code Coverage (%)']:<16.1f} {row['Success Rate (%)']:<16.1f} {row['Average Fix Attempts']:<16.1f} {row['Sample Size']:<12.0f}")
-            
+                print(
+                    f"{row['Model']:<20} {row['Configuration']:<15} ${row['Average Cost (USD)']:<14.4f} {row['Average Code Coverage (%)']:<16.1f} {row['Success Rate (%)']:<16.1f} {row['Average Fix Attempts']:<16.2f} {row['Sample Size']:<12.0f}"
+                )
+
             print()  # Add spacing between models
 
     def _format_table_for_text(self, df: pd.DataFrame) -> str:
         """Format table for text file output."""
         if df.empty:
             return "No data to display."
-        
+
         lines = []
-        
+
         # Header
-        lines.append(f"{'Model':<20} {'Configuration':<15} {'Avg Cost (USD)':<15} {'Avg Coverage (%)':<17} {'Success Rate (%)':<17} {'Avg Fix Attempts':<17} {'Sample Size':<12}")
+        lines.append(
+            f"{'Model':<20} {'Configuration':<15} {'Avg Cost (USD)':<15} {'Avg Coverage (%)':<17} {'Success Rate (%)':<17} {'Avg Fix Attempts':<17} {'Sample Size':<12}"
+        )
         lines.append("-" * 120)
-        
+
         # Data rows grouped by model
         for model in self.expected_models:
             model_display = self._format_model_name(model)
             model_data = df[df["Model"] == model_display]
-            
+
             if model_data.empty:
                 continue
-                
+
             for _, row in model_data.iterrows():
-                lines.append(f"{row['Model']:<20} {row['Configuration']:<15} ${row['Average Cost (USD)']:<14.4f} {row['Average Code Coverage (%)']:<16.1f} {row['Success Rate (%)']:<16.1f} {row['Average Fix Attempts']:<16.1f} {row['Sample Size']:<12.0f}")
-            
+                lines.append(
+                    f"{row['Model']:<20} {row['Configuration']:<15} ${row['Average Cost (USD)']:<14.4f} {row['Average Code Coverage (%)']:<16.1f} {row['Success Rate (%)']:<16.1f} {row['Average Fix Attempts']:<16.2f} {row['Sample Size']:<12.0f}"
+                )
+
             lines.append("")  # Add spacing between models
-        
+
         return "\n".join(lines)
 
     def generate_summary_statistics(self, df: pd.DataFrame) -> None:
         """Generate and display summary statistics."""
         if df.empty:
             return
-            
+
         print("\n" + "=" * 80)
         print("SUMMARY STATISTICS")
         print("=" * 80)
-        
+
         # Overall averages
         total_records = df[df["Sample Size"] > 0]
         if not total_records.empty:
-            weighted_avg_cost = (total_records["Average Cost (USD)"] * total_records["Sample Size"]).sum() / total_records["Sample Size"].sum()
-            weighted_avg_coverage = (total_records["Average Code Coverage (%)"] * total_records["Sample Size"]).sum() / total_records["Sample Size"].sum()
-            weighted_avg_success = (total_records["Success Rate (%)"] * total_records["Sample Size"]).sum() / total_records["Sample Size"].sum()
-            
+            weighted_avg_cost = (
+                total_records["Average Cost (USD)"] * total_records["Sample Size"]
+            ).sum() / total_records["Sample Size"].sum()
+            weighted_avg_coverage = (
+                total_records["Average Code Coverage (%)"]
+                * total_records["Sample Size"]
+            ).sum() / total_records["Sample Size"].sum()
+            weighted_avg_success = (
+                total_records["Success Rate (%)"] * total_records["Sample Size"]
+            ).sum() / total_records["Sample Size"].sum()
+
             print(f"Weighted Overall Averages:")
             print(f"  Average Cost: ${weighted_avg_cost:.4f}")
             print(f"  Average Coverage: {weighted_avg_coverage:.1f}%")
             print(f"  Average Success Rate: {weighted_avg_success:.1f}%")
             print(f"  Total Sample Size: {total_records['Sample Size'].sum():.0f}")
-        
+
         # Best performing combinations
         print(f"\nBest Performing Combinations:")
         if not total_records.empty:
-            best_coverage = total_records.loc[total_records["Average Code Coverage (%)"].idxmax()]
+            best_coverage = total_records.loc[
+                total_records["Average Code Coverage (%)"].idxmax()
+            ]
             best_success = total_records.loc[total_records["Success Rate (%)"].idxmax()]
-            lowest_cost = total_records.loc[total_records["Average Cost (USD)"].idxmin()]
-            
-            print(f"  Highest Coverage: {best_coverage['Model']} - {best_coverage['Configuration']} ({best_coverage['Average Code Coverage (%)']:.1f}%)")
-            print(f"  Highest Success Rate: {best_success['Model']} - {best_success['Configuration']} ({best_success['Success Rate (%)']:.1f}%)")
-            print(f"  Lowest Cost: {lowest_cost['Model']} - {lowest_cost['Configuration']} (${lowest_cost['Average Cost (USD)']:.4f})")
+            lowest_cost = total_records.loc[
+                total_records["Average Cost (USD)"].idxmin()
+            ]
+
+            print(
+                f"  Highest Coverage: {best_coverage['Model']} - {best_coverage['Configuration']} ({best_coverage['Average Code Coverage (%)']:.1f}%)"
+            )
+            print(
+                f"  Highest Success Rate: {best_success['Model']} - {best_success['Configuration']} ({best_success['Success Rate (%)']:.1f}%)"
+            )
+            print(
+                f"  Lowest Cost: {lowest_cost['Model']} - {lowest_cost['Configuration']} (${lowest_cost['Average Cost (USD)']:.4f})"
+            )
 
 
 def main():
@@ -326,7 +359,7 @@ def main():
 
     # Generate comprehensive table
     generator.generate_comprehensive_table()
-    
+
     # Calculate and generate the table
     metrics_df = generator.calculate_comprehensive_metrics()
     generator.generate_summary_statistics(metrics_df)
