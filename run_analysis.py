@@ -105,12 +105,12 @@ class TestResultsAnalyzer:
         if self.traditional_plots:
             self.traditional_plots.create_all_plots(output_path)
 
-        # Create dataset-aware plots (charts 6-11)
+        # Create dataset-aware plots (charts 6-12)
         if self.dataset_aware_plots:
             self.dataset_aware_plots.create_all_plots(output_path)
 
         print(f"\n✅ All visualizations saved to '{output_path}/' directory")
-        print(f"Created 11 visualization charts (1-11)")
+        print(f"Created 12 visualization charts (1-12)")
 
     def print_summary_stats(self) -> None:
         """Print comprehensive analysis reports."""

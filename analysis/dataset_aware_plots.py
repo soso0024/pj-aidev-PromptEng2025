@@ -61,6 +61,9 @@ class DatasetAwarePlots:
         self._plot_algorithm_success_rates(output_path)
         print("  ✓ Created algorithm success rates analysis")
 
+        self._plot_cost_vs_coverage_by_model(output_path)
+        print("  ✓ Created cost vs coverage by model analysis")
+
     def _plot_success_by_complexity(self, output_path: Path) -> None:
         """Plot success rate by problem complexity level."""
         if "complexity_level" not in self.df.columns:
@@ -417,6 +420,207 @@ class DatasetAwarePlots:
         plt.tight_layout()
         plt.savefig(
             output_path / "10_algorithm_success_rates.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+        plt.close()
+
+    def _plot_cost_vs_coverage_by_model(self, output_path: Path) -> None:
+        """Plot cost vs coverage scatter plots for each model."""
+        if "model" not in self.df.columns:
+            print(
+                "Warning: model information not found in data. Skipping cost vs coverage by model analysis."
+            )
+            return
+
+        # Get unique models, excluding 'unknown'
+        models = [model for model in self.df["model"].unique() if model != "unknown"]
+
+        if not models:
+            print(
+                "Warning: No valid model data found. Skipping cost vs coverage by model analysis."
+            )
+            return
+
+        # If only one model, create a single focused plot
+        if len(models) == 1:
+            model = models[0]
+            fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+
+            model_data = self.df[self.df["model"] == model]
+
+            # Color map for different configurations
+            config_colors = {
+                "basic": "#1f77b4",
+                "ast": "#ff7f0e",
+                "docstring": "#2ca02c",
+                "docstring_ast": "#d62728",
+                "ast-fix": "#9467bd",
+            }
+
+            # Calculate average cost and coverage by configuration
+            avg_stats = (
+                model_data.groupby("config_type_display", observed=False)
+                .agg(
+                    {
+                        "total_cost_usd": "mean",
+                        "code_coverage_percent": "mean",
+                        "config_type": "count",  # for sample size
+                    }
+                )
+                .reset_index()
+            )
+
+            # Plot scatter points for each configuration
+            for _, row in avg_stats.iterrows():
+                config = row["config_type_display"]
+                cost = row["total_cost_usd"]
+                coverage = row["code_coverage_percent"]
+                count = row["config_type"]
+
+                color = config_colors.get(config, "#888888")
+                ax.scatter(
+                    cost,
+                    coverage,
+                    color=color,
+                    s=150,
+                    alpha=0.8,
+                    label=f"{config} (n={count})",
+                    edgecolors="black",
+                    linewidths=1,
+                )
+
+                # Add text annotation with configuration name
+                ax.annotate(
+                    config,
+                    (cost, coverage),
+                    xytext=(8, 8),
+                    textcoords="offset points",
+                    fontsize=11,
+                    fontweight="bold",
+                    alpha=0.9,
+                )
+
+            # Formatting
+            ax.set_xlabel("Average Total Cost (USD)", fontsize=12)
+            ax.set_ylabel("Average Code Coverage (%)", fontsize=12)
+            ax.set_title(
+                f'{model.replace("-", " ").title()} Model - Cost vs Coverage Analysis',
+                fontsize=14,
+                fontweight="bold",
+                pad=20,
+            )
+            ax.grid(True, alpha=0.3)
+            ax.set_xlim(left=0)  # Cost cannot be negative
+            ax.set_ylim(0, 100)  # Coverage is 0-100%
+
+            # Add legend
+            ax.legend(loc="lower right", fontsize=10)
+
+            plt.tight_layout()
+
+        else:
+            # Multiple models - use subplot layout
+            n_models = len(models)
+            if n_models == 2:
+                fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+            elif n_models <= 4:
+                fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+                axes = axes.ravel()
+            else:
+                # For more than 4 models, use a larger grid
+                cols = 3
+                rows = (n_models + cols - 1) // cols
+                fig, axes = plt.subplots(rows, cols, figsize=(6 * cols, 6 * rows))
+                axes = axes.ravel()
+
+            # Color map for different configurations
+            config_colors = {
+                "basic": "#1f77b4",
+                "ast": "#ff7f0e",
+                "docstring": "#2ca02c",
+                "docstring_ast": "#d62728",
+                "ast-fix": "#9467bd",
+            }
+
+            for idx, model in enumerate(models):
+                if idx >= len(axes):
+                    break
+
+                ax = axes[idx]
+                model_data = self.df[self.df["model"] == model]
+
+                # Calculate average cost and coverage by configuration
+                avg_stats = (
+                    model_data.groupby("config_type_display", observed=False)
+                    .agg(
+                        {
+                            "total_cost_usd": "mean",
+                            "code_coverage_percent": "mean",
+                            "config_type": "count",  # for sample size
+                        }
+                    )
+                    .reset_index()
+                )
+
+                # Plot scatter points for each configuration
+                for _, row in avg_stats.iterrows():
+                    config = row["config_type_display"]
+                    cost = row["total_cost_usd"]
+                    coverage = row["code_coverage_percent"]
+                    count = row["config_type"]
+
+                    color = config_colors.get(config, "#888888")
+                    ax.scatter(
+                        cost,
+                        coverage,
+                        color=color,
+                        s=100,
+                        alpha=0.8,
+                        label=f"{config} (n={count})",
+                        edgecolors="black",
+                        linewidths=0.5,
+                    )
+
+                    # Add text annotation with configuration name
+                    ax.annotate(
+                        config,
+                        (cost, coverage),
+                        xytext=(5, 5),
+                        textcoords="offset points",
+                        fontsize=9,
+                        alpha=0.8,
+                    )
+
+                # Formatting
+                ax.set_xlabel("Average Total Cost (USD)")
+                ax.set_ylabel("Average Code Coverage (%)")
+                ax.set_title(
+                    f'{model.replace("-", " ").title()} Model', fontweight="bold"
+                )
+                ax.grid(True, alpha=0.3)
+                ax.set_xlim(left=0)  # Cost cannot be negative
+                ax.set_ylim(0, 100)  # Coverage is 0-100%
+
+                # Add legend
+                ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+
+            # Hide empty subplots if any
+            for idx in range(n_models, len(axes)):
+                axes[idx].set_visible(False)
+
+            # Overall title
+            fig.suptitle(
+                "Cost vs Coverage Analysis by Model and Configuration",
+                fontsize=16,
+                fontweight="bold",
+                y=0.98,
+            )
+
+            plt.tight_layout()
+
+        plt.savefig(
+            output_path / "11_cost_vs_coverage_by_model.png",
             dpi=300,
             bbox_inches="tight",
         )
