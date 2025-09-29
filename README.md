@@ -1,251 +1,124 @@
 # HumanEval Test Case Generator
 
-A Python tool that automatically generates comprehensive pytest test cases for HumanEval problems using multiple LLM providers (Claude, Ollama). The generated test cases include automatic evaluation, error fixing, and comprehensive analysis.
+Automatically generates comprehensive pytest test cases for HumanEval problems using multiple LLM providers with evaluation, error fixing, and detailed analysis.
 
 ## Features
 
-- **Multi-model support**: Claude (Sonnet, Haiku) and Ollama models
-- **Automatic test evaluation**: Runs pytest and fixes errors using LLM feedback
-- **Batch processing**: Generate tests for multiple problems at once
-- **Comprehensive analysis**: Visualizations and statistics for different configurations
+- **Multi-model support**: Claude (Opus, Sonnet, Haiku) and Ollama models
+- **Automatic evaluation**: Pytest execution with LLM-powered error fixing
+- **Batch processing**: Generate tests for multiple problems simultaneously
+- **Comprehensive analysis**: 11 visualizations with model comparisons
 - **Cost tracking**: Token usage and API cost monitoring
-- **Code coverage analysis**: Tracks test coverage percentages
+- **Coverage analysis**: Test coverage percentage tracking
 
-## Installation
+## Quick Start
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Set up API keys (see Configuration)
+1. Install dependencies: `uv sync` or `pip install -r requirements.txt`
+2. Set API key: `export ANTHROPIC_API_KEY="your-key"`
+3. Generate test: `python run_test_case_generator.py`
 
-## Configuration
+## Supported Models
 
-### API Key Setup
+Models configured in `models_config.json`:
 
-Choose one method:
-
-**Environment Variable:**
-
-```bash
-export ANTHROPIC_API_KEY="your-api-key-here"
-```
-
-**.env File (Recommended):**
-
-```
-ANTHROPIC_API_KEY=your-api-key-here
-```
-
-**Command Line:**
-
-```bash
-python run_test_case_generator.py --api-key "your-api-key-here"
-```
-
-### Model Configuration
-
-Models are configured in `models_config.json`. Available models:
-
-- **Claude**: `claude-4-sonnet`, `claude-3-5-haiku`, `claude-3-haiku`
-- **Ollama**: `ollama-gpt-oss` (local, free)
+- **Claude Opus 4.1** - Most capable, highest cost
+- **Claude Sonnet 4** - Balanced performance/cost
+- **Claude 3.5 Haiku** - Fast, low cost
+- **Claude 3 Haiku** - Legacy fast model
+- **Ollama GPT-OSS** - Local, free (requires Ollama)
 
 ## Usage
 
-### Basic Usage
+### Single Test Generation
 
 ```bash
-# Generate test for random problem
+# Random problem
 python run_test_case_generator.py
 
-# Generate test for specific problem
-python run_test_case_generator.py --task-id "HumanEval/0"
+# Specific problem with best model
+python run_test_case_generator.py --task-id "HumanEval/0" --models claude-sonnet-4-20250514
 
-# Use specific model
-python run_test_case_generator.py --models claude-4-sonnet
-
-# Include docstring for more context
-python run_test_case_generator.py --include-docstring
-
-# Include AST representation
-python run_test_case_generator.py --include-ast
-
+# Full context generation
+python run_test_case_generator.py --include-docstring --include-ast
 ```
 
-### Command Line Options
-
-| Option                 | Description                       | Default                   |
-| ---------------------- | --------------------------------- | ------------------------- |
-| `--dataset`            | Path to HumanEval dataset         | `dataset/HumanEval.jsonl` |
-| `--output-dir`         | Output directory                  | `generated_tests`         |
-| `--task-id`            | Specific task ID                  | Random selection          |
-| `--models`             | Model(s) to use                   | `ollama-gpt-oss`          |
-| `--include-docstring`  | Include function docstring        | `False`                   |
-| `--include-ast`        | Include AST representation        | `False`                   |
-| `--show-prompt`        | Display prompt preview            | `True`                    |
-| `--disable-evaluation` | Skip automatic evaluation         | `False`                   |
-| `--max-pytest-runs`    | Max pytest runs (initial + fixes) | `3`                       |
-| `--quiet-evaluation`   | Less verbose output               | `False`                   |
-
 ### Batch Processing
-
-For generating tests for multiple problems:
 
 ```bash
 cd batch
 
-# Generate for range
-python run_batch_test_case_generator.py --start 0 --end 10
+# Generate range with multiple models
+python run_batch_test_case_generator.py --start 0 --end 10 --models claude-sonnet-4-20250514 claude-3-5-haiku-20241022
 
-# Generate for specific problems
+# Specific problems
 python run_batch_test_case_generator.py --task-ids "HumanEval/0,HumanEval/5,HumanEval/10"
-
-# Use multiple models
-python run_batch_test_case_generator.py --start 0 --end 5 --models claude-4-sonnet claude-3-5-haiku
-
-# Include full context
-python run_batch_test_case_generator.py --start 0 --end 10 --include-docstring --include-ast
 ```
 
-### Analysis and Visualization
-
-Generate comprehensive analysis of test results:
+### Analysis & Visualization
 
 ```bash
+# Generate 11 analysis plots per model
 python run_analysis.py
+
+# Cross-model comparison
+cd all_comparison
+python best_model_comparison.py
+python comprehensive_table_generator.py
 ```
 
-This creates 10 visualizations in model-specific folders (e.g., `claude-4-sonnet_viz/`) showing:
+Creates visualizations in `[model]_viz/` folders:
 
-**Traditional Analysis (5 plots):**
+- Success rates and coverage analysis
+- Cost vs. performance metrics
+- Algorithm complexity analysis
+- Model comparison charts
 
-- Success rates by configuration
-- Code coverage analysis
-- Cost analysis by configuration
-- Fix attempts distribution
-- Input token usage
-
-**Dataset-Aware Analysis (5 plots):**
-
-- Success rates by problem complexity level
-- Success rates by algorithm type and configuration
-- Configuration performance across complexity levels
-- Algorithm type distribution in dataset
-- Algorithm type success rates (detailed)
-
-## Output Structure
-
-### Generated Files
-
-Each test generation creates:
-
-- **Test file**: `test_humaneval_X_[config]_[status].py`
-- **Statistics file**: `test_humaneval_X_[config]_[status].stats.json`
-
-### Filename Conventions
-
-- `test_humaneval_0_success.py` - Tests passed
-- `test_humaneval_0_false.py` - Tests failed
-- `test_humaneval_0_docstring_ast_success.py` - Multiple options, passed
-
-### Project Structure
+## Project Structure
 
 ```
-project/
 ├── analysis/                    # Analysis modules
-│   ├── data_loader.py
-│   ├── problem_classifier.py
-│   ├── traditional_plots.py
-│   ├── dataset_aware_plots.py
-│   └── analysis_reporter.py
+├── all_comparison/              # Cross-model comparison tools
 ├── batch/                       # Batch processing
-│   ├── run_batch_test_case_generator.py
-│   └── README.md
-├── dataset/
-│   ├── HumanEval.jsonl         # Main dataset
-│   ├── HumanEval_formatted.json
-│   └── HumanEval_formatted.yaml
-├── generated_tests/             # Generated test files
-├── [model]_viz/                # Visualization outputs
+├── dataset/                     # HumanEval dataset files
+├── generated_tests_[model]/     # Model-specific test outputs
+├── [model]_viz/                # Model-specific visualizations
+├── tests/                       # Test suite (52 tests)
 ├── run_test_case_generator.py   # Main script
-├── run_analysis.py             # Analysis script
+├── run_analysis.py             # Generate visualizations
 ├── models_config.json          # Model configuration
 └── requirements.txt
 ```
 
-## Configuration Options Comparison
+## File Outputs
 
-| Configuration | Cost    | Quality  | Use Case                       |
-| ------------- | ------- | -------- | ------------------------------ |
-| Basic         | Lowest  | Variable | Simple problems                |
-| + Docstring   | Medium  | Better   | Complex problems with examples |
-| + AST         | Higher  | Good     | Structure-heavy algorithms     |
-| + Both        | Highest | Best     | Most challenging problems      |
+- **Test files**: `test_humaneval_X_[config]_[status].py`
+- **Statistics**: `test_humaneval_X_[config]_[status].stats.json`
+- **Visualizations**: 11 plots per model in `[model]_viz/`
+- **Comparisons**: Cross-model analysis in `all_comparison/`
 
-## Running Generated Tests
+## Running Tests
 
 ```bash
-cd generated_tests
-
-# Run specific test
+# Run generated tests
+cd generated_tests_[model]
 pytest test_humaneval_0.py -v --cov
 
-# Run all tests
-pytest -v --cov
-
-# HTML coverage report
-pytest --cov --cov-report=html
+# Run test suite
+pytest tests/ -v
 ```
 
-## Statistics File Format
+## Cost Guide
 
-Each `.stats.json` contains:
-
-```json
-{
-  "total_input_tokens": 3876,
-  "total_output_tokens": 2038,
-  "total_cost_usd": 0.042198,
-  "task_id": "HumanEval/4",
-  "evaluation_success": true,
-  "fix_attempts_used": 2,
-  "code_coverage_percent": 85.7
-}
-```
-
-## Troubleshooting
-
-**Common Issues:**
-
-1. **API key not found**: Set your API key using one of the configuration methods
-2. **Import errors**: Run pytest from the `generated_tests` directory
-3. **EOF when reading a line**: Use `--no-show-prompt` for non-interactive environments
-4. **Evaluation fails**: Check pytest installation or use `--disable-evaluation`
-
-**Getting Help:**
-
-```bash
-python run_test_case_generator.py --help
-python batch/run_batch_test_case_generator.py --help
-```
-
-## Cost Optimization
-
-- **Basic generation**: ~$0.01-0.05 per problem
-- **With evaluation**: ~$0.02-0.08 per problem (includes fix attempts)
-- **Use Ollama models for free local processing**
-- **Start with basic configuration, add options for difficult problems**
+| Model            | Input/1K | Output/1K | Use Case         |
+| ---------------- | -------- | --------- | ---------------- |
+| Claude Opus 4.1  | $0.015   | $0.075    | Complex problems |
+| Claude Sonnet 4  | $0.003   | $0.015    | Balanced choice  |
+| Claude 3.5 Haiku | $0.00025 | $0.00125  | Fast iteration   |
+| Ollama GPT-OSS   | Free     | Free      | Local testing    |
 
 ## Requirements
 
 - Python 3.8+
-- anthropic >= 0.7.0
-- pytest >= 7.0.0
-- pytest-cov >= 4.0.0
-- python-dotenv >= 1.0.0
-- pandas, matplotlib, seaborn, numpy (for visualization)
-
-## License
-
-This project is for educational and research purposes.
+- `uv sync` or `pip install -r requirements.txt`
+- Anthropic API key for Claude models
+- Ollama running locally (for local models)
