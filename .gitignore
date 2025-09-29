@@ -43,3 +43,8 @@ generated_tests_claude-3-haiku/
 generated_tests_claude-3-5-haiku/
 generated_tests_claude-4-sonnet/
 generated_tests_claude-opus-4-1/
+
+# Comparison files
+all_comparison/best_model_comparison.png
+all_comparison/comprehensive_summary_table.csv
+all_comparison/comprehensive_summary_table.txt
