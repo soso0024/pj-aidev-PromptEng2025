@@ -22,6 +22,7 @@ Automatically generates comprehensive pytest test cases for HumanEval problems u
 Models configured in `models_config.json`:
 
 - **Claude Opus 4.1** - Most capable, highest cost
+- **Claude Sonnet 4.5** - Latest Sonnet, best balance
 - **Claude Sonnet 4** - Balanced performance/cost
 - **Claude 3.5 Haiku** - Fast, low cost
 - **Claude 3 Haiku** - Legacy fast model
@@ -36,22 +37,10 @@ Models configured in `models_config.json`:
 python run_test_case_generator.py
 
 # Specific problem with best model
-python run_test_case_generator.py --task-id "HumanEval/0" --models claude-sonnet-4-20250514
+python run_test_case_generator.py --task-id "HumanEval/0" --models claude-sonnet-4-5
 
 # Full context generation
 python run_test_case_generator.py --include-docstring --include-ast
-```
-
-### Batch Processing
-
-```bash
-cd batch
-
-# Generate range with multiple models
-python run_batch_test_case_generator.py --start 0 --end 10 --models claude-sonnet-4-20250514 claude-3-5-haiku-20241022
-
-# Specific problems
-python run_batch_test_case_generator.py --task-ids "HumanEval/0,HumanEval/5,HumanEval/10"
 ```
 
 ### Analysis & Visualization
@@ -109,12 +98,13 @@ pytest tests/ -v
 
 ## Cost Guide
 
-| Model            | Input/1K | Output/1K | Use Case         |
-| ---------------- | -------- | --------- | ---------------- |
-| Claude Opus 4.1  | $0.015   | $0.075    | Complex problems |
-| Claude Sonnet 4  | $0.003   | $0.015    | Balanced choice  |
-| Claude 3.5 Haiku | $0.00025 | $0.00125  | Fast iteration   |
-| Ollama GPT-OSS   | Free     | Free      | Local testing    |
+| Model             | Input/1K | Output/1K | Use Case         |
+| ----------------- | -------- | --------- | ---------------- |
+| Claude Opus 4.1   | $0.015   | $0.075    | Complex problems |
+| Claude Sonnet 4.5 | $0.003   | $0.015    | Latest, best     |
+| Claude Sonnet 4   | $0.003   | $0.015    | Balanced choice  |
+| Claude 3.5 Haiku  | $0.00025 | $0.00125  | Fast iteration   |
+| Ollama GPT-OSS    | Free     | Free      | Local testing    |
 
 ## Requirements
 
