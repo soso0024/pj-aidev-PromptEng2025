@@ -49,11 +49,10 @@ class BatchTestGenerator:
         self.max_pytest_runs = max_pytest_runs
         self.quiet_evaluation = quiet_evaluation
         self.task_timeout = task_timeout
-        self.output_dir = Path(output_dir)
+        self.output_dir = (
+            output_dir  # Just store as string, no need to create directory
+        )
         self.dataset = dataset
-
-        # Ensure output directory exists
-        self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # Statistics tracking
         self.total_tasks = 0
