@@ -34,20 +34,20 @@ python run_batch_test_case_generator.py --start 0 --end 20 --disable-evaluation
 
 ### Command Line Options
 
-| Option                   | Description                                   | Default                    |
-| ------------------------ | --------------------------------------------- | -------------------------- |
-| `--start N`              | Start task ID number                          | 0                          |
-| `--end N`                | End task ID number                            | 50                         |
-| `--task-ids "X,Y,Z"`     | Comma-separated specific task IDs             | None (use range)           |
-| `--models MODEL1 MODEL2` | Claude model(s) to use (can specify multiple) | claude-3-5-sonnet-20241022 |
-| `--dataset PATH`         | Path to HumanEval dataset file                | dataset/HumanEval.jsonl    |
-| `--output-dir DIR`       | Output directory for test files               | generated_tests            |
-| `--include-docstring`    | Include function docstring in prompt          | False                      |
-| `--include-ast`          | Include AST of canonical solution in prompt   | False                      |
-| `--disable-evaluation`   | Skip automatic test evaluation                | False                      |
-| `--quiet-evaluation`     | Less verbose evaluation output                | False                      |
-| `--max-fix-attempts N`   | Maximum fix attempts per task                 | 3                          |
-| `--task-timeout N`       | Timeout in seconds for each task              | 300 (5 minutes)            |
+| Option                   | Description                                   | Default                 |
+| ------------------------ | --------------------------------------------- | ----------------------- |
+| `--start N`              | Start task ID number                          | 0                       |
+| `--end N`                | End task ID number                            | 50                      |
+| `--task-ids "X,Y,Z"`     | Comma-separated specific task IDs             | None (use range)        |
+| `--models MODEL1 MODEL2` | Claude model(s) to use (can specify multiple) | claude-3-5-sonnet       |
+| `--dataset PATH`         | Path to HumanEval dataset file                | dataset/HumanEval.jsonl |
+| `--output-dir DIR`       | Output directory for test files               | generated_tests         |
+| `--include-docstring`    | Include function docstring in prompt          | False                   |
+| `--include-ast`          | Include AST of canonical solution in prompt   | False                   |
+| `--disable-evaluation`   | Skip automatic test evaluation                | False                   |
+| `--quiet-evaluation`     | Less verbose evaluation output                | False                   |
+| `--max-fix-attempts N`   | Maximum fix attempts per task                 | 3                       |
+| `--task-timeout N`       | Timeout in seconds for each task              | 300 (5 minutes)         |
 
 ### Multi-Model Generation
 
@@ -55,10 +55,10 @@ Generate tests using multiple Claude models simultaneously:
 
 ```bash
 # Use multiple models for comprehensive testing
-python run_batch_test_case_generator.py --start 0 --end 5 --models claude-3-5-sonnet-20241022 claude-3-5-haiku-20241022
+python run_batch_test_case_generator.py --start 0 --end 5 --models claude-3-5-sonnet claude-3-5-haiku
 
 # Compare model performance across a range
-python run_batch_test_case_generator.py --start 0 --end 10 --models claude-3-5-sonnet-20241022 claude-3-opus-20240229
+python run_batch_test_case_generator.py --start 0 --end 10 --models claude-3-5-sonnet claude-3-opus-4-1
 ```
 
 ## Examples
