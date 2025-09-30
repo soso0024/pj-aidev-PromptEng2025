@@ -44,6 +44,8 @@ class BestModelComparison:
             return "Claude 4.1 Opus"
         elif model_name == "claude-4-sonnet":
             return "Claude 4 Sonnet"
+        elif model_name == "claude-4-5-sonnet":
+            return "Claude 4.5 Sonnet"
         elif model_name == "claude-3-haiku":
             return "Claude 3 Haiku"
         else:
@@ -215,11 +217,21 @@ class BestModelComparison:
                 label=self._format_model_name(model),
             )
 
+            # Adjust annotation position for Claude 4 Sonnet (docstring)
+            if model == "claude-4-sonnet" and config == "docstring":
+                label_x_offset = 15
+                label_y_offset = -20
+                efficiency_y_offset = -60
+            else:
+                label_x_offset = 10
+                label_y_offset = 10
+                efficiency_y_offset = -30
+
             # Add model name and config annotation
             ax.annotate(
                 f"{self._format_model_name(model)}\n({config})",
                 (cost, coverage),
-                xytext=(10, 10),
+                xytext=(label_x_offset, label_y_offset),
                 textcoords="offset points",
                 fontsize=14,
                 fontweight="bold",
@@ -231,7 +243,7 @@ class BestModelComparison:
             ax.annotate(
                 f"Efficiency: {efficiency:.1f}\nSuccess: {success_rate:.1f}%",
                 (cost, coverage),
-                xytext=(10, -30),
+                xytext=(label_x_offset, efficiency_y_offset),
                 textcoords="offset points",
                 fontsize=12,
                 fontweight="bold",
@@ -245,14 +257,6 @@ class BestModelComparison:
 
         # Set tick label font size
         ax.tick_params(axis="both", which="major", labelsize=12)
-
-        ax.set_title(
-            "Best Configuration Comparison Across Models\n"
-            "Selection Criterion: Highest Cost-Performance Efficiency (Coverage per $0.001)",
-            fontsize=20,
-            fontweight="bold",
-            pad=20,
-        )
 
         ax.grid(True, alpha=0.3)
 
@@ -278,6 +282,7 @@ class BestModelComparison:
         # Add legend inside the plot area
         ax.legend(
             loc="center right",
+            bbox_to_anchor=(1.0, 0.35),
             fontsize=12,
             title="Models",
             title_fontsize=14,
