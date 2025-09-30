@@ -36,6 +36,7 @@ class InputTokensComparison:
             "claude-3-haiku",
             "claude-3-5-haiku",
             "claude-4-sonnet",
+            "claude-4-5-sonnet",
             "claude-opus-4-1",
         ]
 
@@ -55,6 +56,7 @@ class InputTokensComparison:
             "claude-3-5-haiku": "Claude 3.5 Haiku",
             "claude-opus-4-1": "Claude 4.1 Opus",
             "claude-4-sonnet": "Claude 4 Sonnet",
+            "claude-4-5-sonnet": "Claude 4.5 Sonnet",
             "claude-3-haiku": "Claude 3 Haiku",
         }
         return model_display_names.get(model_name, model_name.replace("-", " ").title())
