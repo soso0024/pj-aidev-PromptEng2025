@@ -112,6 +112,8 @@ class DatasetAwarePlots:
                     annot=True,
                     fmt=".2f",
                     cmap="RdYlGn",
+                    vmin=0.0,
+                    vmax=1.0,
                     ax=ax,
                     cbar_kws={"label": "Success Rate"},
                     annot_kws={"fontsize": 16, "fontweight": "bold"},
