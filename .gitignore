@@ -40,6 +40,7 @@ claude-4-5-sonnet_viz
 claude-opus-4-1_viz
 
 # Generated test files
+data/
 generated_tests_claude-3-haiku/
 generated_tests_claude-3-5-haiku/
 generated_tests_claude-4-sonnet/
@@ -51,3 +52,10 @@ all_comparison/best_model_comparison.png
 all_comparison/comprehensive_summary_table.csv
 all_comparison/comprehensive_summary_table.txt
 all_comparison/input_tokens_comparison.png
+
+# Tmp files
+generated_tests_tmp/
+tmp_viz/
+
+# Remove duplicates script
+remove_duplicates.py
