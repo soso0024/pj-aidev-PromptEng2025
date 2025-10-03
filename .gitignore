@@ -59,3 +59,6 @@ tmp_viz/
 
 # Remove duplicates script
 remove_duplicates.py
+
+# Backup run analysis script
+analysis/backup_run_analysis.py
