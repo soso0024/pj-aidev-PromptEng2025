@@ -54,8 +54,10 @@ all_comparison/comprehensive_summary_table.txt
 all_comparison/input_tokens_comparison.png
 
 # Tmp files
-generated_tests_tmp/
+generated_tests_claude-3-haiku_tmp/
+generated_tests_claude-3-5-haiku_tmp/
 tmp_viz/
+tmp2_viz/
 
 # Remove duplicates script
 remove_duplicates.py
