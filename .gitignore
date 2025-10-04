@@ -36,7 +36,6 @@ CLAUDE.md
 vizs/
 
 # Generated test files
-data/
 generated_tests_claude-3-haiku/
 generated_tests_claude-3-5-haiku/
 generated_tests_claude-4-sonnet/
