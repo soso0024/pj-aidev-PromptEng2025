@@ -657,7 +657,7 @@ wheels = [
 ]
 
 [[package]]
-name = "pj-aidev-wanc25"
+name = "pj-aidev-PromptEng2025"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

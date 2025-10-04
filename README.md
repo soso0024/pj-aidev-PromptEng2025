@@ -104,6 +104,7 @@ pytest tests/ -v
 | Claude Sonnet 4.5 | $0.003   | $0.015    | Latest, best     |
 | Claude Sonnet 4   | $0.003   | $0.015    | Balanced choice  |
 | Claude 3.5 Haiku  | $0.00025 | $0.00125  | Fast iteration   |
+| Claude 3 Haiku    | $0.00025 | $0.00125  | Legacy fast      |
 | Ollama GPT-OSS    | Free     | Free      | Local testing    |
 
 ## Requirements
