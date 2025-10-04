@@ -112,8 +112,8 @@ class DatasetAwarePlots:
                     annot=True,
                     fmt=".2f",
                     cmap="RdYlGn",
-                    vmin=0.0,
-                    vmax=1.0,
+                    vmin=0,
+                    vmax=1,
                     ax=ax,
                     cbar_kws={"label": "Success Rate"},
                     annot_kws={"fontsize": 16, "fontweight": "bold"},
@@ -541,20 +541,31 @@ class DatasetAwarePlots:
                 )
 
                 # Add text annotation with configuration name
+                # Position on the left for 'ast' configuration only for claude-3-5-haiku
+                config_x_offset = (
+                    -8 if (config == "ast" and model == "claude-3-5-haiku") else 8
+                )
+                config_h_align = (
+                    "right"
+                    if (config == "ast" and model == "claude-3-5-haiku")
+                    else "left"
+                )
                 ax.annotate(
                     config,
                     (cost, coverage),
-                    xytext=(8, 8),
+                    xytext=(config_x_offset, 8),
                     textcoords="offset points",
                     fontsize=18,
                     fontweight="bold",
                     alpha=0.9,
+                    ha=config_h_align,
                 )
 
                 # Add efficiency and success rate annotations
-                # Position text on the left for 'ast' configuration, right for others
-                x_offset = -8 if config == "ast" else 8
-                h_align = "right" if config == "ast" else "left"
+                # Position text on the left for 'ast' configuration only for claude-3-5-haiku, right for others
+                is_ast_left = config == "ast" and model == "claude-3-5-haiku"
+                x_offset = -8 if is_ast_left else 8
+                h_align = "right" if is_ast_left else "left"
                 # Adjust y_offset for better spacing, especially for docstring_ast
                 y_offset = -30
                 ax.annotate(
@@ -679,25 +690,40 @@ class DatasetAwarePlots:
                     )
 
                     # Add text annotation with configuration name
+                    # Position on the left for 'ast' configuration only for claude-3-5-haiku
+                    config_x_offset = (
+                        -8 if (config == "ast" and model == "claude-3-5-haiku") else 5
+                    )
+                    config_h_align = (
+                        "right"
+                        if (config == "ast" and model == "claude-3-5-haiku")
+                        else "left"
+                    )
                     ax.annotate(
                         config,
                         (cost, coverage),
-                        xytext=(5, 5),
+                        xytext=(config_x_offset, 5),
                         textcoords="offset points",
                         fontsize=18,
                         fontweight="bold",
                         alpha=0.8,
+                        ha=config_h_align,
                     )
 
                     # Add efficiency and success rate annotations
+                    # Position text on the left for 'ast' configuration only for claude-3-5-haiku
+                    is_ast_left = config == "ast" and model == "claude-3-5-haiku"
+                    x_offset = -8 if is_ast_left else 5
+                    h_align = "right" if is_ast_left else "left"
                     ax.annotate(
                         f"Efficiency: {efficiency:.1f}\nSuccess: {success_rate:.1f}%",
                         (cost, coverage),
-                        xytext=(5, -20),
+                        xytext=(x_offset, -20),
                         textcoords="offset points",
                         fontsize=16,
                         fontweight="bold",
                         alpha=0.7,
+                        ha=h_align,
                     )
 
                 # Formatting
