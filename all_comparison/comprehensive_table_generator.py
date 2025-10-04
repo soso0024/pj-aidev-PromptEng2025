@@ -73,14 +73,15 @@ class ComprehensiveTableGenerator:
         print("LOADING DATA FROM ALL MODELS FOR COMPREHENSIVE TABLE")
         print("=" * 80)
 
-        # Find all model-specific directories
+        # Find all model-specific directories in the data folder
+        data_dir = self.base_dir / "data"
         model_dirs = []
-        for path in self.base_dir.glob("generated_tests_*"):
+        for path in data_dir.glob("generated_tests_*"):
             if path.is_dir():
                 model_dirs.append(path)
 
         if not model_dirs:
-            print("No model directories found (generated_tests_*)")
+            print(f"No model directories found (generated_tests_*) in {data_dir}")
             return
 
         print(f"Found {len(model_dirs)} model directories:")

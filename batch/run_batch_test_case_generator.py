@@ -267,7 +267,7 @@ Examples:
     )
     parser.add_argument(
         "--output-dir",
-        default="generated_tests",
+        default="data/generated_tests",
         help="Output directory for test files",
     )
     parser.add_argument(

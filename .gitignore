@@ -33,11 +33,7 @@ CLAUDE.md
 .github/workflows/black_formatter.yml
 
 # Visualizations
-claude-3-haiku_viz
-claude-3-5-haiku_viz
-claude-4-sonnet_viz
-claude-4-5-sonnet_viz
-claude-opus-4-1_viz
+vizs/
 
 # Generated test files
 data/
@@ -54,10 +50,7 @@ all_comparison/comprehensive_summary_table.txt
 all_comparison/input_tokens_comparison.png
 
 # Tmp files
-generated_tests_claude-3-haiku_tmp/
-generated_tests_claude-3-5-haiku_tmp/
-tmp_viz/
-tmp2_viz/
+tmp/
 
 # Remove duplicates script
 remove_duplicates.py
