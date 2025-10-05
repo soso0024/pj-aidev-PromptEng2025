@@ -1,6 +1,6 @@
-# Prompt Templates
+# Prompts
 
-This directory contains the prompt templates used in the test case generation research.
+This directory contains the prompts used in the research.
 
 ## Prompt Variants
 
