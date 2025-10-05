@@ -64,10 +64,10 @@ class InputTokensComparison:
     def _format_config_name(self, config_name: str) -> str:
         """Format configuration name for display."""
         config_display_names = {
-            "basic": "Basic",
-            "ast": "AST",
-            "docstring": "Docstring",
-            "docstring_ast": "Docstring + AST",
+            "basic": "basic",
+            "ast": "ast",
+            "docstring": "docstring",
+            "docstring_ast": "docstring_ast",
         }
         return config_display_names.get(config_name, config_name.title())
 
@@ -245,7 +245,7 @@ class InputTokensComparison:
 
             multiplier += 1
 
-        ax.set_xlabel("LLM Models", fontsize=16, fontweight="bold")
+        ax.set_xlabel("LLM Model", fontsize=16, fontweight="bold")
         ax.set_ylabel("Average Input Tokens", fontsize=16, fontweight="bold")
         ax.set_xticks(x + width * 1.5)
         ax.set_xticklabels(models)
