@@ -77,7 +77,7 @@ class ProblemClassifier:
                 result = subprocess.run(
                     [
                         "flake8",
-                        "--max-cognitive-complexity=1",  # Low threshold to capture all scores
+                        "--max-cognitive-complexity=0",  # Low threshold to capture all scores
                         temp_file_path,
                     ],
                     capture_output=True,
