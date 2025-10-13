@@ -40,24 +40,6 @@ class TestResultsAnalyzer:
         # Define the desired order for configuration types
         self.config_order = ["basic", "ast", "docstring", "docstring_ast"]
 
-        # Define consistent algorithm type ordering
-        self.algorithm_type_order = [
-            "list_search",
-            "string_sorting",
-            "mathematical",
-            "list_manipulation",
-            "string_manipulation",
-            "general_logic",
-            "number_theory",
-            "list_sorting",
-            "mathematical_sequence",
-            "validation",
-            "data_structures",
-            "graph_tree",
-            "control_flow_heavy",
-            "unknown",
-        ]
-
         # Initialize components
         self.data_loader = DataLoader(results_dir, dataset_path)
         self.data = []
@@ -78,9 +60,7 @@ class TestResultsAnalyzer:
         # Initialize plotting and reporting components with loaded data
         if self.data:
             self.traditional_plots = TraditionalPlots(self.data, self.config_order)
-            self.dataset_aware_plots = DatasetAwarePlots(
-                self.data, self.config_order, self.algorithm_type_order
-            )
+            self.dataset_aware_plots = DatasetAwarePlots(self.data, self.config_order)
             self.reporter = AnalysisReporter(self.data, self.config_order)
         else:
             print(
@@ -105,12 +85,11 @@ class TestResultsAnalyzer:
         if self.traditional_plots:
             self.traditional_plots.create_all_plots(output_path)
 
-        # Create dataset-aware plots (charts 6-12)
+        # Create dataset-aware plots
         if self.dataset_aware_plots:
             self.dataset_aware_plots.create_all_plots(output_path)
 
         print(f"\n✅ All visualizations saved to '{output_path}/' directory")
-        print(f"Created 12 visualization charts (1-12)")
 
     def print_summary_stats(self) -> None:
         """Print comprehensive analysis reports."""
@@ -149,9 +128,6 @@ class TestResultsAnalyzer:
             "configurations": config_counts,
             "has_dataset_classification": any(
                 "complexity_level" in record for record in self.data
-            ),
-            "has_algorithm_types": any(
-                "algorithm_type" in record for record in self.data
             ),
         }
 
@@ -210,7 +186,6 @@ def main():
     print(
         f"  Dataset classification: {'✅' if summary['has_dataset_classification'] else '❌'}"
     )
-    print(f"  Algorithm types: {'✅' if summary['has_algorithm_types'] else '❌'}")
 
     if summary["total_records"] == 0:
         print(

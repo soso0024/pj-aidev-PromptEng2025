@@ -2,21 +2,17 @@
 """
 Problem Classification Module (Flake8-Cognitive-Complexity Version)
 
-Handles automatic classification of HumanEval problems based on complexity
-and algorithm types using flake8-cognitive-complexity as the sole complexity
-measurement method, with AST analysis only for algorithm type classification.
+Handles automatic classification of HumanEval problems based on cognitive complexity
+using flake8-cognitive-complexity as the sole complexity measurement method.
 
 Key Features:
 - Complexity measurement exclusively using flake8-cognitive-complexity
-- AST-based analysis only for algorithm type classification
 - Adaptive threshold calculation based on data distribution
 - Robust error handling with multiple fallback methods
 - Subprocess-based integration with flake8-cognitive-complexity
-- Supplementary metrics (loops, conditions, recursion) for analysis purposes only
 """
 
 import json
-import ast
 import textwrap
 import numpy as np
 import subprocess
@@ -24,14 +20,12 @@ import tempfile
 import os
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
-from collections import Counter
 
 
 class ProblemClassifier:
-    """Handles classification of HumanEval problems by complexity and algorithm type.
+    """Handles classification of HumanEval problems by cognitive complexity.
 
     Uses flake8-cognitive-complexity exclusively for complexity measurements.
-    AST analysis is used only for algorithm type classification.
     """
 
     def __init__(
@@ -44,91 +38,6 @@ class ProblemClassifier:
         self.problem_classifications = {}
         self.use_adaptive_thresholds = use_adaptive_thresholds
         self.complexity_thresholds = None  # Will be set after loading all data
-
-        # Define consistent algorithm type ordering
-        self.algorithm_type_order = [
-            "list_search",
-            "string_sorting",
-            "mathematical",
-            "list_manipulation",
-            "string_manipulation",
-            "general_logic",
-            "number_theory",
-            "list_sorting",
-            "mathematical_sequence",
-            "validation",
-            "data_structures",
-            "graph_tree",
-            "control_flow_heavy",
-            "unknown",
-        ]
-
-    def _compute_nesting_depth(
-        self, node: ast.AST, target_types: tuple, current_depth: int = 0
-    ) -> int:
-        """
-        Recursively compute maximum nesting depth for specific node types.
-
-        This method properly handles nested structures by recursing through the AST,
-        avoiding the pitfalls of breadth-first traversal.
-
-        Args:
-            node: Current AST node
-            target_types: Tuple of AST node types to track (e.g., (ast.For, ast.While))
-            current_depth: Current depth level
-
-        Returns:
-            Maximum nesting depth found in the subtree
-        """
-        max_depth = current_depth
-
-        for child in ast.iter_child_nodes(node):
-            if isinstance(child, target_types):
-                # This is a target node, increase depth
-                child_depth = self._compute_nesting_depth(
-                    child, target_types, current_depth + 1
-                )
-                max_depth = max(max_depth, child_depth)
-            else:
-                # Not a target node, maintain current depth
-                child_depth = self._compute_nesting_depth(
-                    child, target_types, current_depth
-                )
-                max_depth = max(max_depth, child_depth)
-
-        return max_depth
-
-    def _detect_recursion(self, tree: ast.AST) -> bool:
-        """
-        Detect if the function contains recursive calls.
-
-        This helps identify short but complex functions that use recursion,
-        which may be more challenging for LLMs to generate tests for.
-
-        Args:
-            tree: AST tree of the function
-
-        Returns:
-            True if recursion is detected, False otherwise
-        """
-        func_name = None
-
-        # Find the function name
-        for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
-                func_name = node.name
-                break
-
-        if not func_name:
-            return False
-
-        # Check for recursive calls
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Name) and node.func.id == func_name:
-                    return True
-
-        return False
 
     def _calculate_cognitive_complexity_flake8(self, code: str) -> Dict[str, Any]:
         """
@@ -287,68 +196,36 @@ class ProblemClassifier:
         self, problem_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Classify a HumanEval problem based on its code structure and complexity.
+        Classify a HumanEval problem based on its cognitive complexity.
 
         Uses flake8-cognitive-complexity exclusively for complexity measurement.
-        AST-based analysis is used only for algorithm type classification and
-        supplementary metrics for analysis purposes.
 
         Args:
             problem_data: Dictionary containing problem information including
-                         canonical_solution, prompt, and task_id
+                         canonical_solution and task_id
 
         Returns:
             Dictionary with complexity metrics and classification:
                 - complexity_level: "simple", "medium", or "complex"
                 - complexity_score: Cognitive complexity score from flake8
                 - cognitive_complexity: Same as complexity_score
-                - algorithm_type: Detected algorithm type
-                - Supplementary metrics: loop_count, condition_count, etc.
+                - cognitive_complexity_method: Method used for calculation
+                - problem_id: Problem ID extracted from task_id
         """
         canonical_solution = problem_data.get("canonical_solution", "")
-        prompt = problem_data.get("prompt", "")
         task_id = problem_data.get("task_id", "")
 
         # Clean up indentation issues in canonical solution
         clean_solution = textwrap.dedent(canonical_solution).strip()
 
         # Calculate cognitive complexity using flake8-cognitive-complexity
-        cognitive_complexity_info = self._calculate_cognitive_complexity_flake8(
-            clean_solution
-        )
-        cognitive_complexity = cognitive_complexity_info["cognitive_complexity"]
-
-        # Parse the canonical solution for supplementary AST-based analysis
         try:
-            tree = ast.parse(clean_solution)
-
-            # Count different types of nodes for algorithm classification
-            node_counts = Counter()
-            for node in ast.walk(tree):
-                node_counts[type(node).__name__] += 1
-
-            # Compute nesting depths for supplementary metrics
-            max_loop_depth = self._compute_nesting_depth(tree, (ast.For, ast.While))
-            max_condition_depth = self._compute_nesting_depth(tree, (ast.If, ast.IfExp))
-
-            # Detect recursion
-            has_recursion = self._detect_recursion(tree)
-
-            # Calculate supplementary AST-based metrics
-            total_nodes = sum(node_counts.values())
-            loop_count = node_counts.get("For", 0) + node_counts.get("While", 0)
-            condition_count = node_counts.get("If", 0) + node_counts.get("IfExp", 0)
-            function_calls = node_counts.get("Call", 0)
-            list_comprehensions = node_counts.get("ListComp", 0) + node_counts.get(
-                "DictComp", 0
+            cognitive_complexity_info = self._calculate_cognitive_complexity_flake8(
+                clean_solution
             )
+            cognitive_complexity = cognitive_complexity_info["cognitive_complexity"]
 
-            # Determine algorithm type using AST analysis
-            algorithm_type = self._determine_algorithm_type(
-                prompt, canonical_solution, node_counts
-            )
-
-            # Use cognitive complexity as the sole complexity score (no adjustments)
+            # Use cognitive complexity as the sole complexity score
             complexity_score = cognitive_complexity
 
             # Determine complexity level based on cognitive complexity
@@ -359,47 +236,20 @@ class ProblemClassifier:
                 "complexity_score": complexity_score,
                 "cognitive_complexity": cognitive_complexity,
                 "cognitive_complexity_method": cognitive_complexity_info["method"],
-                "algorithm_type": algorithm_type,
-                # Supplementary AST-based metrics for analysis only
-                "loop_count": loop_count,
-                "condition_count": condition_count,
-                "max_loop_depth": max_loop_depth,
-                "max_condition_depth": max_condition_depth,
-                "total_nodes": total_nodes,
-                "function_calls": function_calls,
-                "list_comprehensions": list_comprehensions,
-                "has_recursion": has_recursion,
-                "has_nested_loops": max_loop_depth > 1,
-                "has_nested_conditions": max_condition_depth > 1,
                 "problem_id": int(task_id.split("/")[1]) if "/" in task_id else 0,
             }
 
         except SyntaxError as e:
-            # Fallback for syntax errors - use only cognitive complexity
+            # Fallback for syntax errors - use LOC-based estimation
             print(f"Syntax error analyzing problem {task_id}: {e}")
             loc = len(canonical_solution.strip().split("\n"))
-
-            # Use cognitive complexity if available, otherwise fallback to LOC
-            fallback_score = (
-                cognitive_complexity if cognitive_complexity > 0 else loc / 2.0
-            )
+            fallback_score = loc / 2.0
 
             return {
                 "complexity_level": self._determine_complexity_level(fallback_score),
                 "complexity_score": fallback_score,
-                "cognitive_complexity": cognitive_complexity,
-                "cognitive_complexity_method": cognitive_complexity_info["method"],
-                "algorithm_type": "unknown",
-                "loop_count": 0,
-                "condition_count": 0,
-                "max_loop_depth": 0,
-                "max_condition_depth": 0,
-                "total_nodes": 0,
-                "function_calls": 0,
-                "list_comprehensions": 0,
-                "has_recursion": False,
-                "has_nested_loops": False,
-                "has_nested_conditions": False,
+                "cognitive_complexity": 0,
+                "cognitive_complexity_method": "fallback-syntax-error",
                 "problem_id": int(task_id.split("/")[1]) if "/" in task_id else 0,
                 "error": "syntax_error",
             }
@@ -410,96 +260,9 @@ class ProblemClassifier:
                 "complexity_score": 0,
                 "cognitive_complexity": 0,
                 "cognitive_complexity_method": "error",
-                "algorithm_type": "unknown",
-                "loop_count": 0,
-                "condition_count": 0,
-                "max_loop_depth": 0,
-                "max_condition_depth": 0,
-                "total_nodes": 0,
-                "function_calls": 0,
-                "list_comprehensions": 0,
-                "has_recursion": False,
-                "has_nested_loops": False,
-                "has_nested_conditions": False,
                 "problem_id": 0,
                 "error": str(e),
             }
-
-    def _determine_algorithm_type(
-        self, prompt: str, code: str, node_counts: Dict
-    ) -> str:
-        """
-        Determine the primary algorithm type based on prompt and code patterns.
-
-        Note: This is treated as auxiliary metadata and is independent of the
-        complexity scoring to avoid confounding variables in analysis.
-        """
-        prompt_lower = prompt.lower()
-        code_lower = code.lower()
-
-        # String processing
-        if any(
-            keyword in prompt_lower
-            for keyword in ["string", "character", "word", "text", "replace"]
-        ):
-            if "sort" in prompt_lower:
-                return "string_sorting"
-            return "string_manipulation"
-
-        # Mathematical operations
-        if any(
-            keyword in prompt_lower
-            for keyword in [
-                "number",
-                "digit",
-                "prime",
-                "factorial",
-                "sum",
-                "product",
-                "math",
-            ]
-        ):
-            if "prime" in prompt_lower:
-                return "number_theory"
-            if any(
-                keyword in prompt_lower
-                for keyword in ["factorial", "fibonacci", "sequence"]
-            ):
-                return "mathematical_sequence"
-            return "mathematical"
-
-        # List/Array operations
-        if any(keyword in prompt_lower for keyword in ["list", "array", "element"]):
-            if "sort" in prompt_lower:
-                return "list_sorting"
-            if any(keyword in prompt_lower for keyword in ["search", "find", "index"]):
-                return "list_search"
-            return "list_manipulation"
-
-        # Graph/Tree operations
-        if any(
-            keyword in prompt_lower for keyword in ["tree", "graph", "node", "path"]
-        ):
-            return "graph_tree"
-
-        # Control flow heavy
-        if node_counts.get("For", 0) + node_counts.get("While", 0) > 2:
-            return "control_flow_heavy"
-
-        # Pattern matching/validation
-        if any(
-            keyword in prompt_lower
-            for keyword in ["valid", "check", "verify", "pattern"]
-        ):
-            return "validation"
-
-        # Data structure operations
-        if any(
-            keyword in prompt_lower for keyword in ["dictionary", "dict", "map", "set"]
-        ):
-            return "data_structures"
-
-        return "general_logic"
 
     def load_problem_classifications(self) -> None:
         """
@@ -561,7 +324,7 @@ class ProblemClassifier:
     def get_classification(self, problem_id: int) -> Dict[str, Any]:
         """Get classification data for a specific problem ID."""
         return self.problem_classifications.get(
-            problem_id, {"complexity_level": "unknown", "algorithm_type": "unknown"}
+            problem_id, {"complexity_level": "unknown"}
         )
 
     def get_all_classifications(self) -> Dict[int, Dict[str, Any]]:
