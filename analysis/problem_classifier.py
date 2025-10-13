@@ -8,7 +8,7 @@ using flake8-cognitive-complexity as the sole complexity measurement method.
 Key Features:
 - Complexity measurement exclusively using flake8-cognitive-complexity
 - Adaptive threshold calculation based on data distribution
-- Robust error handling with multiple fallback methods
+- Robust error handling with clear error messages when flake8 is unavailable
 - Subprocess-based integration with flake8-cognitive-complexity
 """
 
@@ -47,26 +47,37 @@ class ProblemClassifier:
         and parses the results to extract complexity scores.
 
         Args:
-            code: Python code string to analyze
+            code: Python code string to analyze (may be a function body or complete function)
 
         Returns:
             Dictionary containing cognitive complexity information
         """
         try:
+            # Wrap code in a dummy function if it's not already a complete function
+            # HumanEval canonical_solution is often just the function body
+            if not code.strip().startswith("def "):
+                # Indent the code to be inside a function
+                indented_code = textwrap.indent(code, "    ")
+                # Wrap the code in a dummy function to make it syntactically valid
+                wrapped_code = f"def _temp_function():\n{indented_code}\n"
+            else:
+                wrapped_code = code
+
             # Create a temporary file to write the code
             with tempfile.NamedTemporaryFile(
                 mode="w", suffix=".py", delete=False
             ) as temp_file:
-                temp_file.write(code)
+                temp_file.write(wrapped_code)
                 temp_file_path = temp_file.name
 
             try:
                 # Run flake8 with cognitive complexity plugin
-                # Set a high threshold to avoid errors, we just want the complexity values
+                # Set a very low threshold (1) to ensure CCR001 warnings are generated for all functions
+                # This allows us to extract the actual complexity score from the warning message
                 result = subprocess.run(
                     [
                         "flake8",
-                        "--max-cognitive-complexity=100",  # High threshold to avoid errors
+                        "--max-cognitive-complexity=1",  # Low threshold to capture all scores
                         temp_file_path,
                     ],
                     capture_output=True,
@@ -92,14 +103,8 @@ class ProblemClassifier:
                         except (ValueError, IndexError):
                             continue
 
-                # If no cognitive complexity warnings, try to get basic complexity
-                if not cognitive_complexity_scores:
-                    # Fallback: use a simple heuristic based on code structure
-                    cognitive_complexity_scores = [
-                        self._estimate_cognitive_complexity_fallback(code)
-                    ]
-
                 # Return the maximum complexity found (in case of multiple functions)
+                # If no warnings found, the function has complexity 0 (empty or very simple)
                 max_complexity = (
                     max(cognitive_complexity_scores)
                     if cognitive_complexity_scores
@@ -129,38 +134,6 @@ class ProblemClassifier:
                 "cognitive_complexity_scores": [0],
                 "method": "flake8-cognitive-complexity-error",
             }
-
-    def _estimate_cognitive_complexity_fallback(self, code: str) -> int:
-        """
-        Fallback method to estimate cognitive complexity when flake8 fails.
-
-        This provides a simple heuristic based on control flow structures.
-
-        Args:
-            code: Python code string
-
-        Returns:
-            Estimated cognitive complexity score
-        """
-        complexity = 0
-
-        # Basic control flow complexity
-        complexity += code.count("if ") + code.count("elif ")
-        complexity += code.count("for ") + code.count("while ")
-        complexity += code.count("except ") + code.count("try:")
-        complexity += code.count("and ") + code.count("or ")
-
-        # Nested structures add more complexity
-        lines = code.split("\n")
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith(("if ", "for ", "while ", "def ", "class ")):
-                # Count indentation level (rough approximation of nesting)
-                indent_level = len(line) - len(line.lstrip())
-                if indent_level > 4:  # More than one level of nesting
-                    complexity += 1
-
-        return complexity
 
     def _determine_complexity_level(
         self, complexity_score: float, thresholds: Optional[Tuple[float, float]] = None
@@ -199,6 +172,7 @@ class ProblemClassifier:
         Classify a HumanEval problem based on its cognitive complexity.
 
         Uses flake8-cognitive-complexity exclusively for complexity measurement.
+        If flake8-cognitive-complexity fails, returns error information instead of fallback values.
 
         Args:
             problem_data: Dictionary containing problem information including
@@ -206,11 +180,12 @@ class ProblemClassifier:
 
         Returns:
             Dictionary with complexity metrics and classification:
-                - complexity_level: "simple", "medium", or "complex"
-                - complexity_score: Cognitive complexity score from flake8
+                - complexity_level: "simple", "medium", "complex", or "error"
+                - complexity_score: Cognitive complexity score from flake8 (0 if error)
                 - cognitive_complexity: Same as complexity_score
                 - cognitive_complexity_method: Method used for calculation
                 - problem_id: Problem ID extracted from task_id
+                - error: Error message (only present if classification failed)
         """
         canonical_solution = problem_data.get("canonical_solution", "")
         task_id = problem_data.get("task_id", "")
@@ -240,28 +215,30 @@ class ProblemClassifier:
             }
 
         except SyntaxError as e:
-            # Fallback for syntax errors - use LOC-based estimation
-            print(f"Syntax error analyzing problem {task_id}: {e}")
-            loc = len(canonical_solution.strip().split("\n"))
-            fallback_score = loc / 2.0
-
+            # Syntax error in code - cannot use flake8-cognitive-complexity
+            error_msg = f"Syntax error in problem {task_id}: {e}"
+            print(f"ERROR: {error_msg}")
             return {
-                "complexity_level": self._determine_complexity_level(fallback_score),
-                "complexity_score": fallback_score,
-                "cognitive_complexity": 0,
-                "cognitive_complexity_method": "fallback-syntax-error",
-                "problem_id": int(task_id.split("/")[1]) if "/" in task_id else 0,
-                "error": "syntax_error",
-            }
-        except Exception as e:
-            print(f"Error analyzing problem {task_id}: {e}")
-            return {
-                "complexity_level": "unknown",
+                "complexity_level": "error",
                 "complexity_score": 0,
                 "cognitive_complexity": 0,
-                "cognitive_complexity_method": "error",
-                "problem_id": 0,
-                "error": str(e),
+                "cognitive_complexity_method": "error-syntax",
+                "problem_id": int(task_id.split("/")[1]) if "/" in task_id else 0,
+                "error": error_msg,
+            }
+        except Exception as e:
+            # General error - flake8-cognitive-complexity failed
+            error_msg = (
+                f"Failed to calculate cognitive complexity for problem {task_id}: {e}"
+            )
+            print(f"ERROR: {error_msg}")
+            return {
+                "complexity_level": "error",
+                "complexity_score": 0,
+                "cognitive_complexity": 0,
+                "cognitive_complexity_method": "error-general",
+                "problem_id": int(task_id.split("/")[1]) if "/" in task_id else 0,
+                "error": error_msg,
             }
 
     def load_problem_classifications(self) -> None:
@@ -324,7 +301,13 @@ class ProblemClassifier:
     def get_classification(self, problem_id: int) -> Dict[str, Any]:
         """Get classification data for a specific problem ID."""
         return self.problem_classifications.get(
-            problem_id, {"complexity_level": "unknown"}
+            problem_id,
+            {
+                "complexity_level": "unknown",
+                "complexity_score": 0,
+                "cognitive_complexity": 0,
+                "error": "Problem ID not found in classifications",
+            },
         )
 
     def get_all_classifications(self) -> Dict[int, Dict[str, Any]]:
