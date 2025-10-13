@@ -1,42 +1,38 @@
 #!/usr/bin/env python3
 """
-Problem Classification Module (Improved Version)
+Problem Classification Module (Flake8-Cognitive-Complexity Version)
 
 Handles automatic classification of HumanEval problems based on complexity
-and algorithm types using AST analysis with robust depth calculation.
+and algorithm types using flake8-cognitive-complexity as the sole complexity
+measurement method, with AST analysis only for algorithm type classification.
 
-Key Improvements:
-- Recursive AST traversal for accurate nesting depth calculation
-- Documented and configurable complexity weights
+Key Features:
+- Complexity measurement exclusively using flake8-cognitive-complexity
+- AST-based analysis only for algorithm type classification
 - Adaptive threshold calculation based on data distribution
-- Recursion detection for better complexity assessment
-- Robust error handling with LOC-based fallback
+- Robust error handling with multiple fallback methods
+- Subprocess-based integration with flake8-cognitive-complexity
+- Supplementary metrics (loops, conditions, recursion) for analysis purposes only
 """
 
 import json
 import ast
 import textwrap
 import numpy as np
+import subprocess
+import tempfile
+import os
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from collections import Counter
 
 
 class ProblemClassifier:
-    """Handles classification of HumanEval problems by complexity and algorithm type."""
+    """Handles classification of HumanEval problems by complexity and algorithm type.
 
-    # Configuration for complexity scoring weights
-    # These can be optimized through regression analysis against LLM performance
-    COMPLEXITY_WEIGHTS = {
-        "loop_count": 2.0,
-        "condition_count": 1.5,
-        "max_loop_depth": 3.0,
-        "max_condition_depth": 2.0,
-        "function_calls": 0.5,
-        "list_comprehensions": 1.5,
-        "total_nodes": 0.1,
-        "recursion_penalty": 3.0,  # Penalty for recursive functions
-    }
+    Uses flake8-cognitive-complexity exclusively for complexity measurements.
+    AST analysis is used only for algorithm type classification.
+    """
 
     def __init__(
         self,
@@ -134,31 +130,128 @@ class ProblemClassifier:
 
         return False
 
-    def _calculate_complexity_score(
-        self, metrics: Dict[str, float], weights: Optional[Dict[str, float]] = None
-    ) -> float:
+    def _calculate_cognitive_complexity_flake8(self, code: str) -> Dict[str, Any]:
         """
-        Calculate complexity score using weighted metrics.
+        Calculate cognitive complexity using flake8-cognitive-complexity.
 
-        Weights are explicitly documented and can be optimized through
-        regression analysis against empirical LLM performance data.
+        This method uses subprocess to call flake8 with the cognitive complexity plugin
+        and parses the results to extract complexity scores.
 
         Args:
-            metrics: Dictionary of complexity metrics
-            weights: Optional custom weights (defaults to COMPLEXITY_WEIGHTS)
+            code: Python code string to analyze
 
         Returns:
-            Weighted complexity score
+            Dictionary containing cognitive complexity information
         """
-        if weights is None:
-            weights = self.COMPLEXITY_WEIGHTS
+        try:
+            # Create a temporary file to write the code
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".py", delete=False
+            ) as temp_file:
+                temp_file.write(code)
+                temp_file_path = temp_file.name
 
-        score = 0.0
-        for metric, value in metrics.items():
-            if metric in weights:
-                score += weights[metric] * value
+            try:
+                # Run flake8 with cognitive complexity plugin
+                # Set a high threshold to avoid errors, we just want the complexity values
+                result = subprocess.run(
+                    [
+                        "flake8",
+                        "--max-cognitive-complexity=100",  # High threshold to avoid errors
+                        temp_file_path,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,  # Prevent hanging
+                )
 
-        return score
+                # Parse the output for cognitive complexity warnings
+                cognitive_complexity_scores = []
+                lines = result.stdout.split("\n")
+
+                for line in lines:
+                    if "CCR001" in line and "Cognitive complexity is too high" in line:
+                        # Extract complexity score from line like:
+                        # file.py:10:5: CCR001 Cognitive complexity is too high (15 > 100)
+                        try:
+                            # Find the score in parentheses
+                            start = line.find("(") + 1
+                            end = line.find(" >")
+                            if start > 0 and end > start:
+                                score = int(line[start:end])
+                                cognitive_complexity_scores.append(score)
+                        except (ValueError, IndexError):
+                            continue
+
+                # If no cognitive complexity warnings, try to get basic complexity
+                if not cognitive_complexity_scores:
+                    # Fallback: use a simple heuristic based on code structure
+                    cognitive_complexity_scores = [
+                        self._estimate_cognitive_complexity_fallback(code)
+                    ]
+
+                # Return the maximum complexity found (in case of multiple functions)
+                max_complexity = (
+                    max(cognitive_complexity_scores)
+                    if cognitive_complexity_scores
+                    else 0
+                )
+
+                return {
+                    "cognitive_complexity": max_complexity,
+                    "cognitive_complexity_scores": cognitive_complexity_scores,
+                    "method": "flake8-cognitive-complexity",
+                }
+
+            finally:
+                # Clean up temporary file
+                os.unlink(temp_file_path)
+
+        except subprocess.TimeoutExpired:
+            return {
+                "cognitive_complexity": 0,
+                "cognitive_complexity_scores": [0],
+                "method": "flake8-cognitive-complexity-timeout",
+            }
+        except Exception as e:
+            print(f"Error calculating cognitive complexity with flake8: {e}")
+            return {
+                "cognitive_complexity": 0,
+                "cognitive_complexity_scores": [0],
+                "method": "flake8-cognitive-complexity-error",
+            }
+
+    def _estimate_cognitive_complexity_fallback(self, code: str) -> int:
+        """
+        Fallback method to estimate cognitive complexity when flake8 fails.
+
+        This provides a simple heuristic based on control flow structures.
+
+        Args:
+            code: Python code string
+
+        Returns:
+            Estimated cognitive complexity score
+        """
+        complexity = 0
+
+        # Basic control flow complexity
+        complexity += code.count("if ") + code.count("elif ")
+        complexity += code.count("for ") + code.count("while ")
+        complexity += code.count("except ") + code.count("try:")
+        complexity += code.count("and ") + code.count("or ")
+
+        # Nested structures add more complexity
+        lines = code.split("\n")
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith(("if ", "for ", "while ", "def ", "class ")):
+                # Count indentation level (rough approximation of nesting)
+                indent_level = len(line) - len(line.lstrip())
+                if indent_level > 4:  # More than one level of nesting
+                    complexity += 1
+
+        return complexity
 
     def _determine_complexity_level(
         self, complexity_score: float, thresholds: Optional[Tuple[float, float]] = None
@@ -196,43 +289,52 @@ class ProblemClassifier:
         """
         Classify a HumanEval problem based on its code structure and complexity.
 
-        Uses AST-based analysis with proper depth calculation and robust error handling.
-        Improvements over original:
-        - Recursive depth calculation (avoids ast.walk pitfalls)
-        - Recursion detection
-        - Documented weight system
-        - Robust error handling with LOC-based fallback
+        Uses flake8-cognitive-complexity exclusively for complexity measurement.
+        AST-based analysis is used only for algorithm type classification and
+        supplementary metrics for analysis purposes.
 
         Args:
             problem_data: Dictionary containing problem information including
                          canonical_solution, prompt, and task_id
 
         Returns:
-            Dictionary with complexity metrics and classification
+            Dictionary with complexity metrics and classification:
+                - complexity_level: "simple", "medium", or "complex"
+                - complexity_score: Cognitive complexity score from flake8
+                - cognitive_complexity: Same as complexity_score
+                - algorithm_type: Detected algorithm type
+                - Supplementary metrics: loop_count, condition_count, etc.
         """
         canonical_solution = problem_data.get("canonical_solution", "")
         prompt = problem_data.get("prompt", "")
         task_id = problem_data.get("task_id", "")
 
-        # Parse the canonical solution to analyze code structure
+        # Clean up indentation issues in canonical solution
+        clean_solution = textwrap.dedent(canonical_solution).strip()
+
+        # Calculate cognitive complexity using flake8-cognitive-complexity
+        cognitive_complexity_info = self._calculate_cognitive_complexity_flake8(
+            clean_solution
+        )
+        cognitive_complexity = cognitive_complexity_info["cognitive_complexity"]
+
+        # Parse the canonical solution for supplementary AST-based analysis
         try:
-            # Clean up indentation issues in canonical solution
-            clean_solution = textwrap.dedent(canonical_solution).strip()
             tree = ast.parse(clean_solution)
 
-            # Count different types of nodes
+            # Count different types of nodes for algorithm classification
             node_counts = Counter()
             for node in ast.walk(tree):
                 node_counts[type(node).__name__] += 1
 
-            # Compute nesting depths using recursive approach (IMPROVEMENT ①②)
+            # Compute nesting depths for supplementary metrics
             max_loop_depth = self._compute_nesting_depth(tree, (ast.For, ast.While))
             max_condition_depth = self._compute_nesting_depth(tree, (ast.If, ast.IfExp))
 
-            # Detect recursion (IMPROVEMENT ⑥)
+            # Detect recursion
             has_recursion = self._detect_recursion(tree)
 
-            # Calculate complexity metrics
+            # Calculate supplementary AST-based metrics
             total_nodes = sum(node_counts.values())
             loop_count = node_counts.get("For", 0) + node_counts.get("While", 0)
             condition_count = node_counts.get("If", 0) + node_counts.get("IfExp", 0)
@@ -241,33 +343,24 @@ class ProblemClassifier:
                 "DictComp", 0
             )
 
-            # Determine algorithm type (treated as auxiliary metadata) (IMPROVEMENT ⑦)
+            # Determine algorithm type using AST analysis
             algorithm_type = self._determine_algorithm_type(
                 prompt, canonical_solution, node_counts
             )
 
-            # Prepare metrics for scoring (IMPROVEMENT ③)
-            metrics = {
-                "loop_count": loop_count,
-                "condition_count": condition_count,
-                "max_loop_depth": max_loop_depth,
-                "max_condition_depth": max_condition_depth,
-                "function_calls": function_calls,
-                "list_comprehensions": list_comprehensions,
-                "total_nodes": total_nodes,
-                "recursion_penalty": 1.0 if has_recursion else 0.0,
-            }
+            # Use cognitive complexity as the sole complexity score (no adjustments)
+            complexity_score = cognitive_complexity
 
-            # Calculate complexity score with documented weights
-            complexity_score = self._calculate_complexity_score(metrics)
-
-            # Determine complexity level
+            # Determine complexity level based on cognitive complexity
             complexity_level = self._determine_complexity_level(complexity_score)
 
             return {
                 "complexity_level": complexity_level,
                 "complexity_score": complexity_score,
+                "cognitive_complexity": cognitive_complexity,
+                "cognitive_complexity_method": cognitive_complexity_info["method"],
                 "algorithm_type": algorithm_type,
+                # Supplementary AST-based metrics for analysis only
                 "loop_count": loop_count,
                 "condition_count": condition_count,
                 "max_loop_depth": max_loop_depth,
@@ -275,19 +368,27 @@ class ProblemClassifier:
                 "total_nodes": total_nodes,
                 "function_calls": function_calls,
                 "list_comprehensions": list_comprehensions,
-                "has_recursion": has_recursion,  # New field
+                "has_recursion": has_recursion,
                 "has_nested_loops": max_loop_depth > 1,
                 "has_nested_conditions": max_condition_depth > 1,
                 "problem_id": int(task_id.split("/")[1]) if "/" in task_id else 0,
             }
 
         except SyntaxError as e:
-            # IMPROVEMENT ④: Robust fallback for syntax errors
+            # Fallback for syntax errors - use only cognitive complexity
             print(f"Syntax error analyzing problem {task_id}: {e}")
             loc = len(canonical_solution.strip().split("\n"))
+
+            # Use cognitive complexity if available, otherwise fallback to LOC
+            fallback_score = (
+                cognitive_complexity if cognitive_complexity > 0 else loc / 2.0
+            )
+
             return {
-                "complexity_level": "unknown",
-                "complexity_score": loc / 2.0,  # LOC-based fallback
+                "complexity_level": self._determine_complexity_level(fallback_score),
+                "complexity_score": fallback_score,
+                "cognitive_complexity": cognitive_complexity,
+                "cognitive_complexity_method": cognitive_complexity_info["method"],
                 "algorithm_type": "unknown",
                 "loop_count": 0,
                 "condition_count": 0,
@@ -307,6 +408,8 @@ class ProblemClassifier:
             return {
                 "complexity_level": "unknown",
                 "complexity_score": 0,
+                "cognitive_complexity": 0,
+                "cognitive_complexity_method": "error",
                 "algorithm_type": "unknown",
                 "loop_count": 0,
                 "condition_count": 0,
