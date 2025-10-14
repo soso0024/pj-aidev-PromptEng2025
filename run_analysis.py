@@ -200,7 +200,7 @@ def main():
     analyzer.print_summary_stats()
 
     print(
-        f"\n🎉 Analysis complete! Check the '{args.output_dir}/' directory for graphs."
+        f"\n🎉 Analysis complete! Check the '{args.output_dir}' directory for graphs."
     )
 
 
