@@ -245,7 +245,7 @@ class ProblemClassifier:
         """
         Load and classify all problems from the HumanEval dataset.
 
-        IMPROVEMENT ⑤: If use_adaptive_thresholds=True, calculates percentile-based
+        IMPROVEMENT: If use_adaptive_thresholds=True, calculates percentile-based
         thresholds after classifying all problems, ensuring data-driven categorization
         rather than arbitrary fixed values.
         """
@@ -274,7 +274,7 @@ class ProblemClassifier:
                             self.problem_classifications[problem_id] = classification
                             temp_scores.append(classification["complexity_score"])
 
-            # IMPROVEMENT ⑤: Calculate adaptive thresholds based on data distribution
+            # IMPROVEMENT: Calculate adaptive thresholds based on data distribution
             if self.use_adaptive_thresholds and temp_scores:
                 p33, p66 = np.percentile(temp_scores, [33, 66])
                 self.complexity_thresholds = (p33, p66)
