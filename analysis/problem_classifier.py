@@ -280,19 +280,20 @@ class ProblemClassifier:
                 mean = np.mean(temp_scores)
                 std = np.std(temp_scores)
                 min_score = np.min(temp_scores)
+                max_score = np.max(temp_scores)
 
                 # Use standard deviation to define thresholds
                 # threshold1: mean - 0.5 * std (boundary between simple and medium)
                 # threshold2: mean + 0.5 * std (boundary between medium and complex)
                 threshold1 = max(mean - 0.5 * std, min_score)  # Don't go below minimum
-                threshold2 = mean + 0.5 * std
+                threshold2 = min(mean + 0.5 * std, max_score)  # Don't go above maximum
 
                 self.complexity_thresholds = (threshold1, threshold2)
                 print(
                     f"Using standard deviation-based thresholds: {threshold1:.2f} and {threshold2:.2f}"
                 )
                 print(
-                    f"  Mean: {mean:.2f}, Std Dev: {std:.2f}, Range: {min_score:.2f} - {np.max(temp_scores):.2f}"
+                    f"  Mean: {mean:.2f}, Std Dev: {std:.2f}, Range: {min_score:.2f} - {max_score:.2f}"
                 )
 
                 # Second pass: reclassify with adaptive thresholds
