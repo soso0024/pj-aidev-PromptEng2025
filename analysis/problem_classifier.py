@@ -28,6 +28,9 @@ class ProblemClassifier:
     Uses flake8-cognitive-complexity exclusively for complexity measurements.
     """
 
+    # Standard deviation multiplier for adaptive threshold calculation
+    STD_DEV_FACTOR = 0.5
+
     def __init__(
         self,
         dataset_path: str = "dataset/HumanEval.jsonl",
@@ -246,9 +249,9 @@ class ProblemClassifier:
         Load and classify all problems from the HumanEval dataset.
 
         IMPROVEMENT: If use_adaptive_thresholds=True, calculates standard deviation-based
-        thresholds after classifying all problems. Uses mean ± 0.5*std to define boundaries,
-        which classifies problems based on their deviation from average complexity rather than
-        arbitrary fixed values or equal problem count distribution.
+        thresholds after classifying all problems. Uses mean ± STD_DEV_FACTOR*std to define
+        boundaries, which classifies problems based on their deviation from average complexity
+        rather than arbitrary fixed values or equal problem count distribution.
         """
         print(f"Loading problem classifications from {self.dataset_path}...")
 
@@ -283,10 +286,10 @@ class ProblemClassifier:
                 max_score = np.max(temp_scores)
 
                 # Use standard deviation to define thresholds
-                # threshold1: mean - 0.5 * std (boundary between simple and medium)
-                # threshold2: mean + 0.5 * std (boundary between medium and complex)
-                threshold1 = max(mean - 0.5 * std, min_score)  # Don't go below minimum
-                threshold2 = min(mean + 0.5 * std, max_score)  # Don't go above maximum
+                # threshold1: mean - STD_DEV_FACTOR * std (boundary between simple and medium)
+                # threshold2: mean + STD_DEV_FACTOR * std (boundary between medium and complex)
+                threshold1 = max(mean - self.STD_DEV_FACTOR * std, min_score)  # Don't go below minimum
+                threshold2 = min(mean + self.STD_DEV_FACTOR * std, max_score)  # Don't go above maximum
 
                 self.complexity_thresholds = (threshold1, threshold2)
                 print(
