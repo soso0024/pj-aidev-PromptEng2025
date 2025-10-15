@@ -28,6 +28,9 @@ class ProblemClassifier:
     Uses flake8-cognitive-complexity exclusively for complexity measurements.
     """
 
+    # Standard deviation multiplier for adaptive threshold calculation
+    STD_DEV_FACTOR = 0.5
+
     def __init__(
         self,
         dataset_path: str = "dataset/HumanEval.jsonl",
@@ -245,9 +248,10 @@ class ProblemClassifier:
         """
         Load and classify all problems from the HumanEval dataset.
 
-        IMPROVEMENT: If use_adaptive_thresholds=True, calculates percentile-based
-        thresholds after classifying all problems, ensuring data-driven categorization
-        rather than arbitrary fixed values.
+        IMPROVEMENT: If use_adaptive_thresholds=True, calculates standard deviation-based
+        thresholds after classifying all problems. Uses mean ± STD_DEV_FACTOR*std to define
+        boundaries, which classifies problems based on their deviation from average complexity
+        rather than arbitrary fixed values or equal problem count distribution.
         """
         print(f"Loading problem classifications from {self.dataset_path}...")
 
@@ -274,12 +278,25 @@ class ProblemClassifier:
                             self.problem_classifications[problem_id] = classification
                             temp_scores.append(classification["complexity_score"])
 
-            # IMPROVEMENT: Calculate adaptive thresholds based on data distribution
+            # IMPROVEMENT: Calculate adaptive thresholds based on standard deviation
             if self.use_adaptive_thresholds and temp_scores:
-                p33, p66 = np.percentile(temp_scores, [33, 66])
-                self.complexity_thresholds = (p33, p66)
+                mean = np.mean(temp_scores)
+                std = np.std(temp_scores)
+                min_score = np.min(temp_scores)
+                max_score = np.max(temp_scores)
+
+                # Use standard deviation to define thresholds
+                # threshold1: mean - STD_DEV_FACTOR * std (boundary between simple and medium)
+                # threshold2: mean + STD_DEV_FACTOR * std (boundary between medium and complex)
+                threshold1 = max(mean - self.STD_DEV_FACTOR * std, min_score)  # Don't go below minimum
+                threshold2 = min(mean + self.STD_DEV_FACTOR * std, max_score)  # Don't go above maximum
+
+                self.complexity_thresholds = (threshold1, threshold2)
                 print(
-                    f"Using adaptive thresholds: {p33:.2f} (33rd) and {p66:.2f} (66th percentile)"
+                    f"Using standard deviation-based thresholds: {threshold1:.2f} and {threshold2:.2f}"
+                )
+                print(
+                    f"  Mean: {mean:.2f}, Std Dev: {std:.2f}, Range: {min_score:.2f} - {max_score:.2f}"
                 )
 
                 # Second pass: reclassify with adaptive thresholds
