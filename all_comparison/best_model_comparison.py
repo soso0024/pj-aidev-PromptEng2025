@@ -186,12 +186,11 @@ class BestModelComparison:
 
         # Color map for different models
         model_colors = {
-            "claude-4-sonnet": "#E74C3C",  # Red
-            "claude-3-5-haiku": "#3498DB",  # Blue
-            "claude-3-haiku": "#2ECC71",  # Green
-            "claude-opus-4-1": "#9B59B6",  # Purple
-            "gpt-4": "#F39C12",  # Orange
-            "gpt-3.5": "#1ABC9C",  # Turquoise
+            "claude-3-haiku": "#FF4B00",     # Red
+            "claude-3-5-haiku": "#005AFF",   # Blue
+            "claude-4-sonnet": "#03AF7A",    # Green
+            "claude-4-5-sonnet": "#4DC4FF",  # Light Blue
+            "claude-opus-4-1": "#F6AA00",    # Orange
         }
 
         # Plot each model's best configuration
@@ -280,8 +279,43 @@ class BestModelComparison:
                 min(100, coverage_max + coverage_padding),
             )
 
-        # Add legend inside the plot area
+        # 凡例の表示順序を定義
+        legend_order = [
+            "claude-3-haiku",
+            "claude-3-5-haiku",
+            "claude-4-sonnet",
+            "claude-4-5-sonnet",
+            "claude-opus-4-1",
+        ]
+
+        # 現在の凡例のハンドルとラベルを取得
+        handles, labels = ax.get_legend_handles_labels()
+
+        # モデル名の表示形式とキーのマッピングを作成
+        model_key_to_display = {
+            "claude-3-haiku": "Claude 3 Haiku",
+            "claude-3-5-haiku": "Claude 3.5 Haiku",
+            "claude-4-sonnet": "Claude 4 Sonnet",
+            "claude-4-5-sonnet": "Claude 4.5 Sonnet",
+            "claude-opus-4-1": "Claude 4.1 Opus",
+        }
+
+        # ラベルからハンドルへのマッピングを作成
+        label_to_handle = dict(zip(labels, handles))
+
+        # 指定された順序で並び替え
+        ordered_handles = []
+        ordered_labels = []
+        for model_key in legend_order:
+            display_name = model_key_to_display.get(model_key)
+            if display_name and display_name in label_to_handle:
+                ordered_handles.append(label_to_handle[display_name])
+                ordered_labels.append(display_name)
+
+        # Add legend inside the plot area with custom order
         ax.legend(
+            ordered_handles,
+            ordered_labels,
             loc="center right",
             bbox_to_anchor=(1.0, 0.35),
             fontsize=12,
