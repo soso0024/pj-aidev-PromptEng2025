@@ -62,10 +62,10 @@ class ParetoFrontAnalysis:
     def _format_config_name(self, config_name: str) -> str:
         """Format configuration name for display."""
         config_display_names = {
-            "basic": "Basic",
-            "ast": "AST",
-            "docstring": "Docstring",
-            "docstring_ast": "Docstring + AST",
+            "basic": "basic",
+            "ast": "ast",
+            "docstring": "docstring",
+            "docstring_ast": "docstring_ast",
         }
         return config_display_names.get(config_name, config_name.title())
 
@@ -293,8 +293,8 @@ class ParetoFrontAnalysis:
             if is_pareto:
                 # Pareto front points: larger, with black edge
                 ax.scatter(
-                    eff_cov,
                     cost,
+                    eff_cov,
                     color=color,
                     marker=marker,
                     s=350,
@@ -306,8 +306,8 @@ class ParetoFrontAnalysis:
             else:
                 # Non-Pareto points: clearly visible
                 ax.scatter(
-                    eff_cov,
                     cost,
+                    eff_cov,
                     color=color,
                     marker=marker,
                     s=250,
@@ -319,10 +319,10 @@ class ParetoFrontAnalysis:
 
         # Draw Pareto front line
         if len(pareto_front) > 1:
-            pareto_sorted = pareto_front.sort_values("Effective Coverage (%)")
+            pareto_sorted = pareto_front.sort_values("Average Cost (USD)")
             ax.plot(
-                pareto_sorted["Effective Coverage (%)"],
                 pareto_sorted["Average Cost (USD)"],
+                pareto_sorted["Effective Coverage (%)"],
                 "k--",
                 linewidth=3,
                 alpha=0.7,
@@ -331,10 +331,10 @@ class ParetoFrontAnalysis:
             )
 
         # Adjust axis limits to focus on data points and reduce empty space
-        x_min = all_metrics["Effective Coverage (%)"].min()
-        x_max = all_metrics["Effective Coverage (%)"].max()
-        y_min = all_metrics["Average Cost (USD)"].min()
-        y_max = all_metrics["Average Cost (USD)"].max()
+        x_min = all_metrics["Average Cost (USD)"].min()
+        x_max = all_metrics["Average Cost (USD)"].max()
+        y_min = all_metrics["Effective Coverage (%)"].min()
+        y_max = all_metrics["Effective Coverage (%)"].max()
         
         # Add small margins (5% on each side)
         x_margin = (x_max - x_min) * 0.05
@@ -344,8 +344,8 @@ class ParetoFrontAnalysis:
         ax.set_ylim(y_min - y_margin, y_max + y_margin)
 
         # Formatting
-        ax.set_xlabel("Effective Coverage (%) = Coverage × Success Rate / 100", fontsize=18, fontweight="bold")
-        ax.set_ylabel("Average Total Cost (USD)", fontsize=18, fontweight="bold")
+        ax.set_xlabel("Average Total Cost (USD)", fontsize=22, fontweight="bold")
+        ax.set_ylabel("Effective Coverage (%)", fontsize=22, fontweight="bold") # Effective Coverage (%) = Coverage × Success Rate / 100
         # ax.set_title(
         #     "Pareto Front: Cost vs Effective Coverage\n(All Model-Configuration Combinations)",
         #     fontsize=16,
