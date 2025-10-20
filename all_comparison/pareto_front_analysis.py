@@ -17,6 +17,7 @@ from typing import Dict, List, Any, Tuple
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import MultipleLocator
 
 # Add parent directory to path to import analysis modules
 sys.path.append(str(Path(__file__).parent.parent))
@@ -353,6 +354,9 @@ class ParetoFrontAnalysis:
         #     pad=20,
         # )
 
+        # Set x-axis ticks to 0.01 intervals
+        ax.xaxis.set_major_locator(MultipleLocator(0.01))
+        
         ax.tick_params(axis="both", which="major", labelsize=12)
         ax.grid(True, alpha=0.4, linestyle="-", linewidth=0.8)
 
@@ -394,8 +398,8 @@ class ParetoFrontAnalysis:
             handles=model_legend_elements,
             loc="upper left",
             title="Models",
-            fontsize=14,
-            title_fontsize=16,
+            fontsize=18,
+            title_fontsize=20,
             framealpha=0.9,
             fancybox=True,
             shadow=True,
@@ -406,8 +410,8 @@ class ParetoFrontAnalysis:
             handles=config_legend_elements,
             loc="lower right",
             title="Configurations",
-            fontsize=14,
-            title_fontsize=16,
+            fontsize=18,
+            title_fontsize=20,
             framealpha=0.9,
             fancybox=True,
             shadow=True,
