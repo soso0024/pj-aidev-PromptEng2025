@@ -79,9 +79,9 @@ class ParetoFrontAnalysis:
         # Find only the model directories for expected models
         data_dir = self.base_dir / "data"
         model_dirs = []
-        
+
         print(f"Looking for expected models: {self.expected_models}")
-        
+
         for model_name in self.expected_models:
             model_dir = data_dir / f"generated_tests_{model_name}"
             if model_dir.is_dir():
@@ -336,11 +336,11 @@ class ParetoFrontAnalysis:
         x_max = all_metrics["Average Cost (USD)"].max()
         y_min = all_metrics["Effective Coverage (%)"].min()
         y_max = all_metrics["Effective Coverage (%)"].max()
-        
+
         # Add small margins (5% on each side)
         x_margin = (x_max - x_min) * 0.05
         y_margin = (y_max - y_min) * 0.05
-        
+
         ax.set_xlim(x_min - x_margin, x_max + x_margin)
         ax.set_ylim(y_min - y_margin, y_max + y_margin)
 
@@ -356,7 +356,7 @@ class ParetoFrontAnalysis:
 
         # Set x-axis ticks to 0.01 intervals
         ax.xaxis.set_major_locator(MultipleLocator(0.01))
-        
+
         ax.tick_params(axis="both", which="major", labelsize=12)
         ax.grid(True, alpha=0.4, linestyle="-", linewidth=0.8)
 
