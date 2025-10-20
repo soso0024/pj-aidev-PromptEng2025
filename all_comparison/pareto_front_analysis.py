@@ -271,10 +271,10 @@ class ParetoFrontAnalysis:
 
         # Marker shapes for different configurations
         config_markers = {
-            "Basic": "o",
-            "AST": "s",
-            "Docstring": "^",
-            "Docstring + AST": "D",
+            "basic": "o",
+            "ast": "s",
+            "docstring": "^",
+            "docstring_ast": "D",
         }
 
         # Plot all points
