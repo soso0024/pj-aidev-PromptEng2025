@@ -416,7 +416,7 @@ class ParetoFrontAnalysis:
         plt.tight_layout()
 
         # Save the plot
-        filename = "pareto_front_all_combinations.png"
+        filename = "pareto_front_cost_vs_effective_coverage.png"
         plt.savefig(
             output_dir / filename,
             dpi=300,
