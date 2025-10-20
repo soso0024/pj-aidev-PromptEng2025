@@ -186,10 +186,10 @@ class BestModelComparison:
 
         # Color map for different models
         model_colors = {
-            "claude-3-haiku": "#FF4B00",     # Red
+            "claude-3-haiku": "#4DC4FF",  # Light Blue
             "claude-3-5-haiku": "#005AFF",   # Blue
             "claude-4-sonnet": "#03AF7A",    # Green
-            "claude-4-5-sonnet": "#4DC4FF",  # Light Blue
+            "claude-4-5-sonnet": "#FF4B00",     # Red
             "claude-opus-4-1": "#F6AA00",    # Orange
         }
 
@@ -333,7 +333,7 @@ class BestModelComparison:
             0.02,
             stats_text,
             transform=ax.transAxes,
-            fontsize=12,
+            fontsize=16,
             fontweight="bold",
             verticalalignment="bottom",
             horizontalalignment="right",
