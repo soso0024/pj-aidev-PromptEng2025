@@ -184,7 +184,7 @@ class InputTokensComparison:
         # Create the grouped bar chart with broken axis
         # Use two subplots to create a broken y-axis effect
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 6), sharex=True, 
-                                        gridspec_kw={'height_ratios': [8, 1], 'hspace': 0.05})
+                                        gridspec_kw={'height_ratios': [12, 1], 'hspace': 0.05})
 
         # Prepare data for grouped bar chart
         models = [self._format_model_name(model) for model in self.expected_models]
@@ -318,8 +318,6 @@ class InputTokensComparison:
 
         # Set labels and formatting
         ax2.set_xlabel("LLM Model", fontsize=16, fontweight="bold")
-        ax1.set_ylabel("Average Input Tokens", fontsize=16, fontweight="bold", y=0)
-        ax2.set_ylabel("")
         
         ax2.set_xticks(x + width * 1.5)
         ax2.set_xticklabels(models)
@@ -334,6 +332,12 @@ class InputTokensComparison:
         ax2.grid(True, alpha=0.3, axis="y")
 
         plt.tight_layout()
+        
+        # Adjust the y-axis label position after tight_layout
+        # Move it closer to the graph to remove the gap
+        fig.text(0.06, 0.5, "Average Input Tokens", 
+                fontsize=16, fontweight="bold", 
+                rotation=90, va='center', ha='center')
 
         # Save the chart
         output_path = output_dir / "input_tokens_comparison.png"
