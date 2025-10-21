@@ -99,7 +99,7 @@ class DatasetAwarePlots:
                     vmax=1,
                     ax=ax,
                     cbar_kws={"label": "Success Rate"},
-                    annot_kws={"fontsize": 16, "fontweight": "bold"},
+                    annot_kws={"fontsize": 26, "fontweight": "bold"},
                 )
                 # Increase colorbar label and tick label sizes
                 cbar = heatmap.collections[0].colorbar
