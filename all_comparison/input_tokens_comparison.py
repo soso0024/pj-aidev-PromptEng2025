@@ -181,8 +181,10 @@ class InputTokensComparison:
         print("CREATING INPUT TOKENS COMPARISON CHART")
         print("=" * 80)
 
-        # Create the grouped bar chart
-        fig, ax = plt.subplots(figsize=(12, 8))
+        # Create the grouped bar chart with broken axis
+        # Use two subplots to create a broken y-axis effect
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 6), sharex=True, 
+                                        gridspec_kw={'height_ratios': [8, 1], 'hspace': 0.05})
 
         # Prepare data for grouped bar chart
         models = [self._format_model_name(model) for model in self.expected_models]
@@ -193,6 +195,9 @@ class InputTokensComparison:
         width = 0.2
         multiplier = 0
 
+        # Find max value to determine axis ranges
+        all_values = []
+        
         # Create bars for each configuration
         for config_key in self.expected_configs:
             config_display = self._format_config_name(config_key)
@@ -209,7 +214,9 @@ class InputTokensComparison:
                 ]
 
                 if not subset.empty:
-                    values.append(subset.iloc[0]["Average Input Tokens"])
+                    val = subset.iloc[0]["Average Input Tokens"]
+                    values.append(val)
+                    all_values.append(val)
                     errors.append(
                         subset.iloc[0]["Std Input Tokens"]
                         if pd.notna(subset.iloc[0]["Std Input Tokens"])
@@ -219,9 +226,11 @@ class InputTokensComparison:
                     values.append(0)
                     errors.append(0)
 
-            # Create bars for this configuration
+            # Create bars for this configuration on both axes
             offset = width * multiplier
-            bars = ax.bar(
+            
+            # Draw on upper subplot (ax1) - for higher values
+            bars1 = ax1.bar(
                 x + offset,
                 values,
                 width,
@@ -229,34 +238,100 @@ class InputTokensComparison:
                 color=self.config_colors[config_key],
                 alpha=0.8,
             )
+            
+            # Draw on lower subplot (ax2) - for lower values
+            bars2 = ax2.bar(
+                x + offset,
+                values,
+                width,
+                color=self.config_colors[config_key],
+                alpha=0.8,
+            )
 
             # Add value labels on bars
-            for i, (bar, value) in enumerate(zip(bars, values)):
+            for i, (bar, value) in enumerate(zip(bars1, values)):
                 if value > 0:
-                    ax.text(
-                        bar.get_x() + bar.get_width() / 2,
-                        bar.get_height() + 100,
-                        f"{value:.0f}",
-                        ha="center",
-                        va="bottom",
-                        fontsize=10,
-                        fontweight="bold",
-                    )
+                    # Determine which axis to use for label
+                    if value >= 2500:  # Higher values go on ax1
+                        ax1.text(
+                            bar.get_x() + bar.get_width() / 2,
+                            bar.get_height() + 50,
+                            f"{value:.0f}",
+                            ha="center",
+                            va="bottom",
+                            fontsize=9,
+                            fontweight="bold",
+                        )
+                    else:  # Lower values go on ax2 (values <= 1000)
+                        ax2.text(
+                            bars2[i].get_x() + bars2[i].get_width() / 2,
+                            bars2[i].get_height() + 20,
+                            f"{value:.0f}",
+                            ha="center",
+                            va="bottom",
+                            fontsize=9,
+                            fontweight="bold",
+                        )
 
             multiplier += 1
 
-        ax.set_xlabel("LLM Model", fontsize=16, fontweight="bold")
-        ax.set_ylabel("Average Input Tokens", fontsize=16, fontweight="bold")
-        ax.set_xticks(x + width * 1.5)
-        ax.set_xticklabels(models)
-        ax.tick_params(axis="both", which="major", labelsize=12)
-        ax.set_ylim(bottom=0)
+        # Set axis limits for broken axis effect (break between 1000 and 2500)
+        # Upper subplot shows higher values (above 2500)
+        ax1.set_ylim(2500, max(all_values) * 1.05)
+        # Lower subplot shows lower values (below 1000)
+        ax2.set_ylim(0, 1000)
 
-        # Add legend
-        ax.legend(loc="upper right", fontsize=12)
+        # Set custom y-axis ticks
+        # For ax1 (upper): 3000, 4000, 5000, etc.
+        max_val = max(all_values)
+        upper_ticks = list(range(3000, int(max_val) + 1000, 1000))
+        ax1.set_yticks(upper_ticks)
+        
+        # For ax2 (lower): 0, 1000
+        ax2.set_yticks([0, 1000])
+
+        # Hide the spines between ax1 and ax2
+        ax1.spines['bottom'].set_visible(False)
+        ax2.spines['top'].set_visible(False)
+        ax1.xaxis.tick_top()
+        ax1.tick_params(labeltop=False)
+        ax2.xaxis.tick_bottom()
+
+        # Add wavy lines to indicate broken axis
+        # Create wavy line data
+        wave_x = np.linspace(0, 1, 100)
+        wave_amp = 0.01  # amplitude of wave
+        wave_freq = 5  # frequency of wave
+        wave_y = wave_amp * np.sin(wave_freq * 2 * np.pi * wave_x)
+        
+        # Draw wavy lines on ax1 (bottom of upper plot)
+        ax1.plot(wave_x, wave_y - 0.01, transform=ax1.transAxes, 
+                color='k', clip_on=False, linewidth=1.5)
+        ax1.plot(wave_x, wave_y - 0.025, transform=ax1.transAxes, 
+                color='k', clip_on=False, linewidth=1.5)
+        
+        # Draw wavy lines on ax2 (top of lower plot)
+        ax2.plot(wave_x, wave_y + 1.01, transform=ax2.transAxes, 
+                color='k', clip_on=False, linewidth=1.5)
+        ax2.plot(wave_x, wave_y + 1.025, transform=ax2.transAxes, 
+                color='k', clip_on=False, linewidth=1.5)
+
+        # Set labels and formatting
+        ax2.set_xlabel("LLM Model", fontsize=16, fontweight="bold")
+        ax1.set_ylabel("Average Input Tokens", fontsize=16, fontweight="bold", y=0)
+        ax2.set_ylabel("")
+        
+        ax2.set_xticks(x + width * 1.5)
+        ax2.set_xticklabels(models)
+        ax1.tick_params(axis="both", which="major", labelsize=12)
+        ax2.tick_params(axis="both", which="major", labelsize=12)
+
+        # Add legend (only once, on ax1)
+        ax1.legend(loc="upper right", fontsize=12)
 
         # Add grid for better readability
-        ax.grid(True, alpha=0.3, axis="y")
+        ax1.grid(True, alpha=0.3, axis="y")
+        ax2.grid(True, alpha=0.3, axis="y")
 
         plt.tight_layout()
 
