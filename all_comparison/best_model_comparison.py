@@ -182,7 +182,7 @@ class BestModelComparison:
             return
 
         # Create the plot
-        fig, ax = plt.subplots(1, 1, figsize=(14, 10))
+        fig, ax = plt.subplots(1, 1, figsize=(10, 7))
 
         # Color map for different models
         model_colors = {
@@ -214,134 +214,73 @@ class BestModelComparison:
                 alpha=0.8,
                 edgecolors="black",
                 linewidths=2,
-                label=self._format_model_name(model),
-            )
-
-            # Adjust annotation position for Claude 4 Sonnet (docstring)
-            if model == "claude-4-sonnet" and config == "docstring":
-                label_x_offset = 15
-                label_y_offset = -20
-                efficiency_y_offset = -60
-            else:
-                label_x_offset = 10
-                label_y_offset = 10
-                efficiency_y_offset = -30
-
-            # Add model name and config annotation
-            ax.annotate(
-                f"{self._format_model_name(model)}\n({config})",
-                (cost, coverage),
-                xytext=(label_x_offset, label_y_offset),
-                textcoords="offset points",
-                fontsize=14,
-                fontweight="bold",
-                bbox=dict(boxstyle="round,pad=0.3", facecolor=color, alpha=0.3),
-                ha="left",
-            )
-
-            # Add efficiency score in smaller text
-            ax.annotate(
-                f"Efficiency: {efficiency:.1f}\nSuccess: {success_rate:.1f}%",
-                (cost, coverage),
-                xytext=(label_x_offset, efficiency_y_offset),
-                textcoords="offset points",
-                fontsize=12,
-                fontweight="bold",
-                alpha=0.7,
-                ha="left",
+                label=f"{self._format_model_name(model)} with {config}",
             )
 
         # Formatting
-        ax.set_xlabel("Average Total Cost (USD)", fontsize=16, fontweight="bold")
-        ax.set_ylabel("Average Code Coverage (%)", fontsize=16, fontweight="bold")
+        ax.set_xlabel("Average Total Cost (USD)", fontsize=22, fontweight="bold")
+        ax.set_ylabel("Average Code Coverage (%)", fontsize=22, fontweight="bold")
 
         # Set tick label font size
         ax.tick_params(axis="both", which="major", labelsize=12)
 
         ax.grid(True, alpha=0.3)
 
-        # Set axis limits with padding based on actual data range
+        # Set axis limits with x-axis fixed to 0.200
+        ax.set_xlim(0, 0.200)
+        
+        # Set y-axis limits with padding based on actual data range
         if len(best_configs) > 0:
-            cost_min = best_configs["total_cost_usd"].min()
-            cost_max = best_configs["total_cost_usd"].max()
             coverage_min = best_configs["code_coverage_percent"].min()
             coverage_max = best_configs["code_coverage_percent"].max()
-
-            cost_range = cost_max - cost_min
             coverage_range = coverage_max - coverage_min
-
-            cost_padding = max(cost_range * 0.15, 0.002)
             coverage_padding = max(coverage_range * 0.15, 3)
 
-            ax.set_xlim(max(0, cost_min - cost_padding), cost_max + cost_padding)
             ax.set_ylim(
                 max(0, coverage_min - coverage_padding),
                 min(100, coverage_max + coverage_padding),
             )
 
-        # 凡例の表示順序を定義
+        # 凡例の表示順序を定義（モデル名のプレフィックスで並び替え）
         legend_order = [
-            "claude-3-haiku",
-            "claude-3-5-haiku",
-            "claude-4-sonnet",
-            "claude-4-5-sonnet",
-            "claude-opus-4-1",
+            "Claude 3 Haiku",
+            "Claude 3.5 Haiku",
+            "Claude 4 Sonnet",
+            "Claude 4.5 Sonnet",
+            "Claude 4.1 Opus",
         ]
 
         # 現在の凡例のハンドルとラベルを取得
         handles, labels = ax.get_legend_handles_labels()
 
-        # モデル名の表示形式とキーのマッピングを作成
-        model_key_to_display = {
-            "claude-3-haiku": "Claude 3 Haiku",
-            "claude-3-5-haiku": "Claude 3.5 Haiku",
-            "claude-4-sonnet": "Claude 4 Sonnet",
-            "claude-4-5-sonnet": "Claude 4.5 Sonnet",
-            "claude-opus-4-1": "Claude 4.1 Opus",
-        }
-
         # ラベルからハンドルへのマッピングを作成
         label_to_handle = dict(zip(labels, handles))
 
-        # 指定された順序で並び替え
+        # 指定された順序で並び替え（モデル名で始まるラベルを探す）
         ordered_handles = []
         ordered_labels = []
-        for model_key in legend_order:
-            display_name = model_key_to_display.get(model_key)
-            if display_name and display_name in label_to_handle:
-                ordered_handles.append(label_to_handle[display_name])
-                ordered_labels.append(display_name)
+        for model_prefix in legend_order:
+            # このモデル名で始まるラベルを探す
+            for label in labels:
+                if label.startswith(model_prefix) and label not in ordered_labels:
+                    ordered_handles.append(label_to_handle[label])
+                    ordered_labels.append(label)
+                    break
 
         # Add legend inside the plot area with custom order
         ax.legend(
             ordered_handles,
             ordered_labels,
-            loc="center right",
-            bbox_to_anchor=(1.0, 0.35),
-            fontsize=12,
+            loc="lower right",
+            fontsize=20,
             title="Models",
-            title_fontsize=14,
+            title_fontsize=22,
             framealpha=0.9,
             fancybox=True,
             shadow=True,
         )
 
-        # Add summary statistics
-        stats_text = self._generate_summary_stats(best_configs)
-        ax.text(
-            0.98,
-            0.02,
-            stats_text,
-            transform=ax.transAxes,
-            fontsize=16,
-            fontweight="bold",
-            verticalalignment="bottom",
-            horizontalalignment="right",
-            bbox=dict(boxstyle="round,pad=0.5", facecolor="lightgray", alpha=0.8),
-        )
-
-        # Adjust layout with extra space for annotations
-        plt.subplots_adjust(left=0.08, right=0.85, top=0.88, bottom=0.12)
+        plt.tight_layout()
 
         # Save the plot
         filename = "best_model_comparison.png"
