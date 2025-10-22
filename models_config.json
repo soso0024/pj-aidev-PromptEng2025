@@ -1,14 +1,5 @@
 {
   "models": {
-    "claude-opus-4-1": {
-      "api_name": "claude-opus-4-1-20250805",
-      "folder_name": "claude-opus-4-1",
-      "provider": "anthropic",
-      "pricing": {
-        "input_per_1k": 0.015,
-        "output_per_1k": 0.075
-      }
-    },
     "claude-sonnet-4-5": {
       "api_name": "claude-sonnet-4-5-20250929",
       "folder_name": "claude-4-5-sonnet",
@@ -16,6 +7,24 @@
       "pricing": {
         "input_per_1k": 0.003,
         "output_per_1k": 0.015
+      }
+    },
+    "claude-haiku-4-5": {
+      "api_name": "claude-haiku-4-5-20251001",
+      "folder_name": "claude-haiku-4-5",
+      "provider": "anthropic",
+      "pricing": {
+        "input_per_1k": 0.001,
+        "output_per_1k": 0.005
+      }
+    },
+    "claude-opus-4-1": {
+      "api_name": "claude-opus-4-1-20250805",
+      "folder_name": "claude-opus-4-1",
+      "provider": "anthropic",
+      "pricing": {
+        "input_per_1k": 0.015,
+        "output_per_1k": 0.075
       }
     },
     "claude-sonnet-4": {

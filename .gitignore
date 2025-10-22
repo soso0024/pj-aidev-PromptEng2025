@@ -39,8 +39,9 @@ vizs/
 generated_tests_claude-3-haiku/
 generated_tests_claude-3-5-haiku/
 generated_tests_claude-4-sonnet/
-generated_tests_claude-4-5-sonnet/
 generated_tests_claude-opus-4-1/
+generated_tests_claude-haiku-4-5/
+generated_tests_claude-4-5-sonnet/
 
 # Comparison filesg
 all_comparison/best_model_comparison.png
