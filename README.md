@@ -15,7 +15,7 @@ Automatically generates comprehensive pytest test cases for HumanEval problems u
 
 1. Install dependencies: `uv sync` or `pip install -r requirements.txt`
 2. Set API key: `export ANTHROPIC_API_KEY="your-key"`
-3. Generate test: `python run_test_case_generator.py`
+3. Generate test: `python run_test_case_generator.py` (**requires Python 3.10+**)
 
 ## Supported Models
 
@@ -46,10 +46,10 @@ python run_test_case_generator.py --include-docstring --include-ast
 ### Analysis & Visualization
 
 ```bash
-# Generate 11 analysis plots per model
+# Generate 11 analysis plots per model (requires Python 3.8.20+)
 python run_analysis.py
 
-# Cross-model comparison
+# Cross-model comparison (requires Python 3.8.20+)
 cd all_comparison
 python best_model_comparison.py
 python comprehensive_table_generator.py
@@ -109,7 +109,10 @@ pytest tests/ -v
 
 ## Requirements
 
-- Python 3.8+
+- **Python 3.10+** required for test generation (`run_test_case_generator.py`)
+- **Python 3.8.20+** required for analysis scripts (`run_analysis.py` and `all_comparison/`)
 - `uv sync` or `pip install -r requirements.txt`
 - Anthropic API key for Claude models
 - Ollama running locally (for local models)
+
+> **Note**: Due to different Python version requirements, you may need separate virtual environments for test generation (3.10+) and analysis (3.8.20+).
