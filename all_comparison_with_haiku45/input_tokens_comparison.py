@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Input Tokens Comparison Across All LLMs
+Input Tokens Comparison Across All LLMs (with Claude 4.5 Haiku)
 
 Creates a grouped bar chart comparing average input tokens across all models
 and configurations, similar to the individual 5_input_tokens.png files.
@@ -35,6 +35,7 @@ class InputTokensComparison:
         self.expected_models = [
             "claude-3-haiku",
             "claude-3-5-haiku",
+            "claude-haiku-4-5",  # NEW
             "claude-4-sonnet",
             "claude-4-5-sonnet",
             "claude-opus-4-1",
@@ -54,6 +55,7 @@ class InputTokensComparison:
         """Format model name for display."""
         model_display_names = {
             "claude-3-5-haiku": "Claude 3.5 Haiku",
+            "claude-haiku-4-5": "Claude 4.5 Haiku",  # NEW
             "claude-opus-4-1": "Claude 4.1 Opus",
             "claude-4-sonnet": "Claude 4 Sonnet",
             "claude-4-5-sonnet": "Claude 4.5 Sonnet",
@@ -166,7 +168,7 @@ class InputTokensComparison:
     def create_input_tokens_comparison(self, output_dir: Path = None) -> None:
         """Create and save the input tokens comparison chart."""
         if output_dir is None:
-            output_dir = Path("all_comparison")
+            output_dir = Path("all_comparison_with_haiku45")
 
         output_dir.mkdir(exist_ok=True)
 
@@ -183,7 +185,7 @@ class InputTokensComparison:
 
         # Create the grouped bar chart with broken axis
         # Use two subplots to create a broken y-axis effect
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 6), sharex=True, 
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 6), sharex=True, 
                                         gridspec_kw={'height_ratios': [12, 1], 'hspace': 0.05})
 
         # Prepare data for grouped bar chart
@@ -320,7 +322,7 @@ class InputTokensComparison:
         ax2.set_xlabel("LLM Model", fontsize=16, fontweight="bold")
         
         ax2.set_xticks(x + width * 1.5)
-        ax2.set_xticklabels(models)
+        ax2.set_xticklabels(models, rotation=15, ha='right')
         ax1.tick_params(axis="both", which="major", labelsize=12)
         ax2.tick_params(axis="both", which="major", labelsize=12)
 
@@ -383,7 +385,7 @@ class InputTokensComparison:
 
 def main():
     """Main function to generate the input tokens comparison."""
-    print("📊 Input Tokens Comparison Generator")
+    print("📊 Input Tokens Comparison Generator (with Claude 4.5 Haiku)")
     print("=" * 60)
 
     # Initialize comparison generator
@@ -404,3 +406,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

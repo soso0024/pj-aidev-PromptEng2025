@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Best Model Comparison Plot
+Best Model Comparison Plot (with Claude 4.5 Haiku)
 
 Creates a scatter plot showing the best configuration from each model based on
 cost-performance efficiency (coverage per $0.001).
@@ -39,15 +39,17 @@ class BestModelComparison:
         """Format model name for display."""
         # Special cases for specific models
         if model_name == "claude-3-5-haiku":
-            return "Claude 3.5 Haiku"
+            return "Claude Haiku 3.5"
+        elif model_name == "claude-haiku-4-5":
+            return "Claude Haiku 4.5"
         elif model_name == "claude-opus-4-1":
-            return "Claude 4.1 Opus"
+            return "Claude Opus 4.1"
         elif model_name == "claude-4-sonnet":
-            return "Claude 4 Sonnet"
+            return "Claude Sonnet 4"
         elif model_name == "claude-4-5-sonnet":
-            return "Claude 4.5 Sonnet"
+            return "Claude Sonnet 4.5"
         elif model_name == "claude-3-haiku":
-            return "Claude 3 Haiku"
+            return "Claude Haiku 3"
         else:
             # Fallback: replace hyphens with spaces and title case
             return model_name.replace("-", " ").title()
@@ -171,7 +173,7 @@ class BestModelComparison:
     def create_comparison_plot(self, output_path: Path = None) -> None:
         """Create the best model comparison scatter plot."""
         if output_path is None:
-            output_path = Path("all_comparison")
+            output_path = Path("all_comparison_with_haiku45")
 
         output_path.mkdir(exist_ok=True)
 
@@ -188,6 +190,7 @@ class BestModelComparison:
         model_colors = {
             "claude-3-haiku": "#4DC4FF",  # Light Blue
             "claude-3-5-haiku": "#005AFF",   # Blue
+            "claude-haiku-4-5": "#FF1493",   # Deep Pink (NEW)
             "claude-4-sonnet": "#03AF7A",    # Green
             "claude-4-5-sonnet": "#FF4B00",     # Red
             "claude-opus-4-1": "#F6AA00",    # Orange
@@ -228,7 +231,7 @@ class BestModelComparison:
 
         # Set axis limits with x-axis fixed to 0.200
         ax.set_xlim(0, 0.200)
-        
+
         # Set y-axis limits with padding based on actual data range
         if len(best_configs) > 0:
             coverage_min = best_configs["code_coverage_percent"].min()
@@ -243,15 +246,20 @@ class BestModelComparison:
 
         # 凡例の表示順序を定義（モデル名のプレフィックスで並び替え）
         legend_order = [
-            "Claude 3 Haiku",
-            "Claude 3.5 Haiku",
-            "Claude 4 Sonnet",
-            "Claude 4.5 Sonnet",
-            "Claude 4.1 Opus",
+            "Claude Haiku 3",
+            "Claude Haiku 3.5",
+            "Claude Haiku 4.5",
+            "Claude Sonnet 4",
+            "Claude Sonnet 4.5",
+            "Claude Opus 4.1",
         ]
 
         # 現在の凡例のハンドルとラベルを取得
         handles, labels = ax.get_legend_handles_labels()
+
+        print(f"\n凡例デバッグ情報:")
+        print(f"生成されたラベル: {labels}")
+        print(f"期待する順序: {legend_order}")
 
         # ラベルからハンドルへのマッピングを作成
         label_to_handle = dict(zip(labels, handles))
@@ -260,12 +268,15 @@ class BestModelComparison:
         ordered_handles = []
         ordered_labels = []
         for model_prefix in legend_order:
-            # このモデル名で始まるラベルを探す
+            # このモデル名で始まるラベルを探す（正確なマッチング: モデル名 + " with"）
             for label in labels:
-                if label.startswith(model_prefix) and label not in ordered_labels:
+                if label.startswith(model_prefix + ' with') and label not in ordered_labels:
                     ordered_handles.append(label_to_handle[label])
                     ordered_labels.append(label)
+                    print(f"  マッチ: '{model_prefix}' -> '{label}'")
                     break
+            else:
+                print(f"  マッチなし: '{model_prefix}'")
 
         # Add legend inside the plot area with custom order
         ax.legend(
@@ -320,7 +331,7 @@ class BestModelComparison:
 
 def main():
     """Main function to create the comparison plot."""
-    print("🔍 Best Model Configuration Comparison Tool")
+    print("🔍 Best Model Configuration Comparison Tool (with Claude 4.5 Haiku)")
     print("=" * 50)
 
     # Initialize comparison tool
@@ -337,3 +348,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -99,7 +99,7 @@ class DatasetAwarePlots:
                     vmax=1,
                     ax=ax,
                     cbar_kws={"label": "Success Rate"},
-                    annot_kws={"fontsize": 16, "fontweight": "bold"},
+                    annot_kws={"fontsize": 26, "fontweight": "bold"},
                 )
                 # Increase colorbar label and tick label sizes
                 cbar = heatmap.collections[0].colorbar
@@ -235,7 +235,7 @@ class DatasetAwarePlots:
                 # Adjust y_offset for better spacing, especially for docstring_ast
                 y_offset = -30
                 ax.annotate(
-                    f"Efficiency: {efficiency:.1f}\nSuccess: {success_rate:.1f}%",
+                    f"CCE: {efficiency:.1f}\nSuccess: {success_rate:.1f}%",
                     (cost, coverage),
                     xytext=(x_offset, y_offset),
                     textcoords="offset points",
@@ -382,7 +382,7 @@ class DatasetAwarePlots:
                     x_offset = -8 if is_ast_left else 5
                     h_align = "right" if is_ast_left else "left"
                     ax.annotate(
-                        f"Efficiency: {efficiency:.1f}\nSuccess: {success_rate:.1f}%",
+                        f"CCE: {efficiency:.1f}\nSuccess: {success_rate:.1f}%",
                         (cost, coverage),
                         xytext=(x_offset, -20),
                         textcoords="offset points",
