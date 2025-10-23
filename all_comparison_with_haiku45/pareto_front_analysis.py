@@ -53,12 +53,12 @@ class ParetoFrontAnalysis:
     def _format_model_name(self, model_name: str) -> str:
         """Format model name for display."""
         model_display_names = {
-            "claude-3-5-haiku": "Claude 3.5 Haiku",
-            "claude-haiku-4-5": "Claude 4.5 Haiku",  # NEW
-            "claude-opus-4-1": "Claude 4.1 Opus",
-            "claude-4-sonnet": "Claude 4 Sonnet",
-            "claude-4-5-sonnet": "Claude 4.5 Sonnet",
-            "claude-3-haiku": "Claude 3 Haiku",
+            "claude-3-5-haiku": "Claude Haiku 3.5",
+            "claude-haiku-4-5": "Claude Haiku 4.5",  # NEW
+            "claude-opus-4-1": "Claude Opus 4.1",
+            "claude-4-sonnet": "Claude Sonnet 4",
+            "claude-4-5-sonnet": "Claude Sonnet 4.5",
+            "claude-3-haiku": "Claude Haiku 3",
         }
         return model_display_names.get(model_name, model_name.replace("-", " ").title())
 
