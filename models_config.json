@@ -63,7 +63,43 @@
         "input_per_1k": 0.0,
         "output_per_1k": 0.0
       }
+    },
+    "gemini-1.5-pro": {
+      "api_name": "gemini-1.5-pro",
+      "folder_name": "gemini-1-5-pro",
+      "provider": "gemini",
+      "pricing": {
+        "input_per_1k": 0.00125,
+        "output_per_1k": 0.005
+      }
+    },
+    "gemini-1.5-flash": {
+      "api_name": "gemini-1.5-flash",
+      "folder_name": "gemini-1-5-flash",
+      "provider": "gemini",
+      "pricing": {
+        "input_per_1k": 0.000075,
+        "output_per_1k": 0.0003
+      }
+    },
+    "gemini-2.0-flash-exp": {
+      "api_name": "gemini-2.0-flash-exp",
+      "folder_name": "gemini-2-0-flash-exp",
+      "provider": "gemini",
+      "pricing": {
+        "input_per_1k": 0.0,
+        "output_per_1k": 0.0
+      }
+    },
+    "gemini-2.5-flash-lite": {
+      "api_name": "gemini-2.5-flash-lite",
+      "folder_name": "gemini-2-5-flash-lite",
+      "provider": "gemini",
+      "pricing": {
+        "input_per_1k": 0.0,
+        "output_per_1k": 0.0
+      }
     }
   },
-  "default_model": "ollama-gpt-oss"
+  "default_model": "gemini-2.5-flash-lite"
 }

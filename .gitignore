@@ -42,6 +42,7 @@ generated_tests_claude-4-sonnet/
 generated_tests_claude-opus-4-1/
 generated_tests_claude-haiku-4-5/
 generated_tests_claude-4-5-sonnet/
+generated_tests_gemini-2-5-flash-lite
 
 # Comparison filesg
 all_comparison/best_model_comparison.png
