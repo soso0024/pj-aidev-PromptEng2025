@@ -15,6 +15,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Optional
 import anthropic
+import google.generativeai as genai
 from dotenv import load_dotenv
 from model_utils import get_available_models, get_default_model
 from ollama_client import Ollama
@@ -27,7 +28,7 @@ AST_SCORE_ERROR_MATCH = 10  # Score for nodes matching error patterns
 AST_SCORE_LINE_OVERLAP = 5  # Score for nodes overlapping with error lines
 AST_SCORE_COMMON_ERROR = 2  # Score for common error-prone operations
 PYTEST_TIMEOUT_SECONDS = 60  # Timeout for pytest execution
-DEFAULT_MAX_TOKENS = 2000  # Max tokens for LLM response
+DEFAULT_MAX_TOKENS = 8000  # Max tokens for LLM response (high limit for research evaluation)
 DEFAULT_TEMPERATURE = 0.0  # Temperature for deterministic responses
 DISPLAY_LINE_LIMIT = 20  # Max lines to display without truncation
 TRUNCATE_HEAD_LINES = 10  # Lines to show at start when truncating
@@ -107,6 +108,16 @@ class TestCaseGenerator:
             else:
                 # Will fail later if trying to use Anthropic models without API key
                 clients["anthropic"] = None
+
+        # Initialize Gemini client if needed
+        if "gemini" in providers_needed:
+            gemini_api_key = os.getenv("GEMINI_API_KEY")
+            if gemini_api_key:
+                genai.configure(api_key=gemini_api_key)
+                clients["gemini"] = genai  # Store the module itself as the client
+            else:
+                # Will fail later if trying to use Gemini models without API key
+                clients["gemini"] = None
 
         # Initialize Ollama client if needed
         if "ollama" in providers_needed:
@@ -895,29 +906,66 @@ Start your response with "import pytest" and include only executable Python test
             if not client:
                 if provider == "anthropic":
                     raise ValueError(f"Anthropic API key required for model {model}")
+                elif provider == "gemini":
+                    raise ValueError(f"Gemini API key required for model {model}")
                 else:
                     raise ValueError(f"Client not initialized for provider {provider}")
 
-            response = client.messages.create(
-                model=self.model_mapping[model],
-                max_tokens=DEFAULT_MAX_TOKENS,
-                temperature=DEFAULT_TEMPERATURE,  # A temperature of 0.0 results in the most deterministic and consistent responses, as the model will consistently choose the most probable words and sequences.
-                messages=[{"role": "user", "content": prompt}],
-            )
+            # Handle different provider APIs
+            if provider == "gemini":
+                # Gemini API call
+                gemini_model = client.GenerativeModel(self.model_mapping[model])
+                response = gemini_model.generate_content(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        max_output_tokens=DEFAULT_MAX_TOKENS,
+                        temperature=DEFAULT_TEMPERATURE,
+                    ),
+                )
 
-            # Track token usage and cost
-            usage = response.usage
-            input_tokens = usage.input_tokens
-            output_tokens = usage.output_tokens
+                # Check if response was blocked or has no candidates
+                if not response.candidates:
+                    if response.prompt_feedback and hasattr(response.prompt_feedback, 'block_reason'):
+                        print(f"❌ Gemini API blocked content: {response.prompt_feedback.block_reason}")
+                    else:
+                        print("❌ Gemini API returned no candidates.")
+                    return ""
 
-            self.total_input_tokens += input_tokens
-            self.total_output_tokens += output_tokens
+                # Track token usage and cost
+                input_tokens = response.usage_metadata.prompt_token_count
+                output_tokens = response.usage_metadata.candidates_token_count
 
-            cost = self.calculate_cost(input_tokens, output_tokens, model)
-            self.total_cost += cost
+                self.total_input_tokens += input_tokens
+                self.total_output_tokens += output_tokens
 
-            raw_response = response.content[0].text
-            return self.clean_generated_code(raw_response)
+                cost = self.calculate_cost(input_tokens, output_tokens, model)
+                self.total_cost += cost
+
+                raw_response = response.text
+                return self.clean_generated_code(raw_response)
+
+            else:
+                # Anthropic/Ollama API call (existing code)
+                response = client.messages.create(
+                    model=self.model_mapping[model],
+                    max_tokens=DEFAULT_MAX_TOKENS,
+                    temperature=DEFAULT_TEMPERATURE,  # A temperature of 0.0 results in the most deterministic and consistent responses, as the model will consistently choose the most probable words and sequences.
+                    messages=[{"role": "user", "content": prompt}],
+                )
+
+                # Track token usage and cost
+                usage = response.usage
+                input_tokens = usage.input_tokens
+                output_tokens = usage.output_tokens
+
+                self.total_input_tokens += input_tokens
+                self.total_output_tokens += output_tokens
+
+                cost = self.calculate_cost(input_tokens, output_tokens, model)
+                self.total_cost += cost
+
+                raw_response = response.content[0].text
+                return self.clean_generated_code(raw_response)
 
         except Exception as e:
             print(f"❌ Error generating test cases with {model}: {e}")
@@ -1122,31 +1170,72 @@ Corrected code:"""
             if not client:
                 if provider == "anthropic":
                     raise ValueError(f"Anthropic API key required for model {model}")
+                elif provider == "gemini":
+                    raise ValueError(f"Gemini API key required for model {model}")
                 else:
                     raise ValueError(f"Client not initialized for provider {provider}")
 
-            response = client.messages.create(
-                model=self.model_mapping[model],
-                max_tokens=3000,
-                temperature=0.0,
-                messages=[{"role": "user", "content": fix_prompt}],
-            )
-
-            # Track token usage
-            usage = response.usage
-            self.total_input_tokens += usage.input_tokens
-            self.total_output_tokens += usage.output_tokens
-
-            cost = self.calculate_cost(usage.input_tokens, usage.output_tokens, model)
-            self.total_cost += cost
-
-            if self.verbose_evaluation:
-                print(
-                    f"💰 Fix attempt {attempt} cost: ${cost:.6f} (Input: {usage.input_tokens}, Output: {usage.output_tokens})"
+            # Handle different provider APIs
+            if provider == "gemini":
+                # Gemini API call
+                gemini_model = client.GenerativeModel(self.model_mapping[model])
+                response = gemini_model.generate_content(
+                    fix_prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        max_output_tokens=DEFAULT_MAX_TOKENS,
+                        temperature=DEFAULT_TEMPERATURE,
+                    ),
                 )
 
-            raw_response = response.content[0].text
-            cleaned_response = self.clean_generated_code(raw_response)
+                # Check if response was blocked or has no candidates
+                if not response.candidates:
+                    if response.prompt_feedback and hasattr(response.prompt_feedback, 'block_reason'):
+                        print(f"❌ Gemini API blocked content: {response.prompt_feedback.block_reason}")
+                    else:
+                        print("❌ Gemini API returned no candidates.")
+                    return test_code  # Return original code if fix fails
+
+                # Track token usage
+                input_tokens = response.usage_metadata.prompt_token_count
+                output_tokens = response.usage_metadata.candidates_token_count
+                self.total_input_tokens += input_tokens
+                self.total_output_tokens += output_tokens
+
+                cost = self.calculate_cost(input_tokens, output_tokens, model)
+                self.total_cost += cost
+
+                if self.verbose_evaluation:
+                    print(
+                        f"💰 Fix attempt {attempt} cost: ${cost:.6f} (Input: {input_tokens}, Output: {output_tokens})"
+                    )
+
+                raw_response = response.text
+                cleaned_response = self.clean_generated_code(raw_response)
+
+            else:
+                # Anthropic/Ollama API call (existing code)
+                response = client.messages.create(
+                    model=self.model_mapping[model],
+                    max_tokens=DEFAULT_MAX_TOKENS,
+                    temperature=DEFAULT_TEMPERATURE,
+                    messages=[{"role": "user", "content": fix_prompt}],
+                )
+
+                # Track token usage
+                usage = response.usage
+                self.total_input_tokens += usage.input_tokens
+                self.total_output_tokens += usage.output_tokens
+
+                cost = self.calculate_cost(usage.input_tokens, usage.output_tokens, model)
+                self.total_cost += cost
+
+                if self.verbose_evaluation:
+                    print(
+                        f"💰 Fix attempt {attempt} cost: ${cost:.6f} (Input: {usage.input_tokens}, Output: {usage.output_tokens})"
+                    )
+
+                raw_response = response.content[0].text
+                cleaned_response = self.clean_generated_code(raw_response)
 
             # Display the LLM's fix response
             self.display_fix_response(cleaned_response, attempt)
