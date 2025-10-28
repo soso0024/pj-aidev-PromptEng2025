@@ -28,7 +28,7 @@ AST_SCORE_ERROR_MATCH = 10  # Score for nodes matching error patterns
 AST_SCORE_LINE_OVERLAP = 5  # Score for nodes overlapping with error lines
 AST_SCORE_COMMON_ERROR = 2  # Score for common error-prone operations
 PYTEST_TIMEOUT_SECONDS = 60  # Timeout for pytest execution
-DEFAULT_MAX_TOKENS = 2000  # Max tokens for LLM response
+DEFAULT_MAX_TOKENS = 8000  # Max tokens for LLM response (high limit for research evaluation)
 DEFAULT_TEMPERATURE = 0.0  # Temperature for deterministic responses
 DISPLAY_LINE_LIMIT = 20  # Max lines to display without truncation
 TRUNCATE_HEAD_LINES = 10  # Lines to show at start when truncating
@@ -923,6 +923,14 @@ Start your response with "import pytest" and include only executable Python test
                     ),
                 )
 
+                # Check if response was blocked or has no candidates
+                if not response.candidates:
+                    if response.prompt_feedback and hasattr(response.prompt_feedback, 'block_reason'):
+                        print(f"❌ Gemini API blocked content: {response.prompt_feedback.block_reason}")
+                    else:
+                        print("❌ Gemini API returned no candidates.")
+                    return ""
+
                 # Track token usage and cost
                 input_tokens = response.usage_metadata.prompt_token_count
                 output_tokens = response.usage_metadata.candidates_token_count
@@ -1174,10 +1182,18 @@ Corrected code:"""
                 response = gemini_model.generate_content(
                     fix_prompt,
                     generation_config=genai.types.GenerationConfig(
-                        max_output_tokens=3000,
-                        temperature=0.0,
+                        max_output_tokens=DEFAULT_MAX_TOKENS,
+                        temperature=DEFAULT_TEMPERATURE,
                     ),
                 )
+
+                # Check if response was blocked or has no candidates
+                if not response.candidates:
+                    if response.prompt_feedback and hasattr(response.prompt_feedback, 'block_reason'):
+                        print(f"❌ Gemini API blocked content: {response.prompt_feedback.block_reason}")
+                    else:
+                        print("❌ Gemini API returned no candidates.")
+                    return test_code  # Return original code if fix fails
 
                 # Track token usage
                 input_tokens = response.usage_metadata.prompt_token_count
@@ -1200,8 +1216,8 @@ Corrected code:"""
                 # Anthropic/Ollama API call (existing code)
                 response = client.messages.create(
                     model=self.model_mapping[model],
-                    max_tokens=3000,
-                    temperature=0.0,
+                    max_tokens=DEFAULT_MAX_TOKENS,
+                    temperature=DEFAULT_TEMPERATURE,
                     messages=[{"role": "user", "content": fix_prompt}],
                 )
 
